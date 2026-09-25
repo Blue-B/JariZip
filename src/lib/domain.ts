@@ -579,6 +579,7 @@ const jobSchema = z
     skills: z.array(z.string().min(1).max(MAX_SKILL_LENGTH)).max(50),
     publishedAt: dateField,
     deadline: dateField,
+    deadlineType: z.enum(['date', 'rolling', 'until-filled', 'unknown']).optional(),
     status: jobStatusField,
     verification: verificationField,
     verifiedAt: dateField,

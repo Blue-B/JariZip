@@ -1,4 +1,15 @@
 .discover-page { max-width: 1120px; margin: 0 auto; }
+.discover-feed-controls { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 22px; margin: 18px 0; color: #53617a; font-size: 12px; line-height: 1.8; }
+.discover-feed-controls label { display: inline-flex; align-items: center; gap: 9px; cursor: pointer; }
+.discover-feed-controls input[type=checkbox] { width: 17px; height: 17px; min-width: 17px; margin: 0; accent-color: #2348e8; }
+.discover-feed-controls p { margin: 0; }
+.discover-source-progress { flex-basis: 100%; font-size: 11px; }
+.discover-deadline { display: inline-flex; align-items: center; gap: 5px; color: #405374; font-size: 12px; font-weight: 600; }
+.discover-deadline.is-urgent { color: #a44b14; }
+.discover-load-more { display: grid; justify-items: center; gap: 12px; margin: 24px 0; padding: 20px 10px; text-align: center; color: #53617a; font-size: 13px; line-height: 1.8; }
+.discover-load-more p { margin: 0; }
+.discover-load-more .button { min-width: 210px; min-height: 44px; }
+.discover-more-error { color: #805829; }
 .discover-heading { display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; margin: 4px 0 28px; }
 .discover-heading h1 { font-size: 27px; letter-spacing: -1px; line-height: 1.35; color: var(--pw-ink, #101a30); }
 .discover-heading p { margin-top: 10px; color: #64718a; line-height: 1.8; font-size: 14px; }

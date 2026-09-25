@@ -31,6 +31,17 @@ try {
   const aggregate = await json('/api/jobs?source=all');
   assert.ok(new Set(aggregate.jobs.map(job => job.source)).size >= 2, 'Aggregate page must contain multiple real sources.');
   assert.ok(aggregate.sourceResults.every(source => source.status === 'ok'), JSON.stringify(aggregate.sourceResults));
+  const continuation = [], seen = new Set(); let cursor = 'start';
+  for (let page = 0; page < 4 && cursor; page++) {
+    const batch = await json(`/api/jobs?source=all&page=${page}&cursor=${encodeURIComponent(cursor)}`);
+    assert.ok(batch.sourceResults.every(source => source.status === 'ok'), JSON.stringify(batch.sourceResults));
+    const before = seen.size;
+    for (const job of batch.jobs) seen.add(job.sourceUrl);
+    assert.ok(seen.size > before, 'Continuation must add new real jobs, not repeat the same page.');
+    continuation.push({ batch: page + 1, received: batch.jobs.length, newUnique: seen.size - before, cumulativeUnique: seen.size });
+    cursor = batch.nextCursor;
+  }
+  console.log(JSON.stringify({ continuation }, null, 2));
   browser = await chromium.launch({ headless: true });
   const page = await browser.newPage({ viewport: { width: 1440, height: 1000 }, locale: 'ko-KR', reducedMotion: 'reduce' });
   const errors = []; page.on('pageerror', error => errors.push(error.message));

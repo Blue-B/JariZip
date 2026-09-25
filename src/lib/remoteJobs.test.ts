@@ -38,7 +38,7 @@ describe('multi-source client boundary', () => {
     await expect(refreshRemoteJob(makeJob())).rejects.toThrow('요청한 공고와 다른 응답');
   });
   it('rejects oversized or fabricated aggregate responses', async () => {
-    vi.stubGlobal('fetch', vi.fn(async () => Response.json({ jobs: Array.from({ length: 101 }, () => makeJob()), checkedAt })));
+    vi.stubGlobal('fetch', vi.fn(async () => Response.json({ jobs: Array.from({ length: 201 }, () => makeJob()), checkedAt })));
     await expect(searchRemoteJobs('all', '', 'all', 0)).rejects.toThrow('목록 형식');
     vi.stubGlobal('fetch', vi.fn(async () => Response.json({ jobs: [{ ...makeJob(), isDemo: true }], checkedAt })));
     await expect(searchRemoteJobs('all', '', 'all', 0)).rejects.toThrow();

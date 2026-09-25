@@ -5,6 +5,7 @@ export interface Job {
   id: string; company: string; title: string; role: string; location: string;
   experience: string; employment: string; salary: string; skills: string[];
   publishedAt: string; deadline: string; status: JobStatus;
+  deadlineType?: 'date' | 'rolling' | 'until-filled' | 'unknown';
   verification: 'demo' | 'manual' | 'unverified' | 'source'; verifiedAt: string;
   sourceUrl: string; source: string; description: string; requirements: string;
   benefits: string; companyInfo: string; saved: boolean; isDemo: boolean;

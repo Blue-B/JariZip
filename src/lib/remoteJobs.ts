@@ -4,8 +4,8 @@ import type { Job, WorkspaceState } from './types';
 
 export type JobSource = 'wanted' | 'saramin' | 'jumpit' | 'zighang';
 export type SearchSource = JobSource | 'all';
-export interface SourceResult { id: JobSource; name: string; count: number; status: 'ok' | 'error'; message?: string }
-export interface SearchResult { jobs: Job[]; nextPage: number | null; checkedAt: string; warnings: string[]; cached: boolean; total?: number; sourceResults: SourceResult[] }
+export interface SourceResult { id: JobSource; name: string; count: number; status: 'ok' | 'error'; message?: string; exhausted?: boolean; scannedPages?: number }
+export interface SearchResult { jobs: Job[]; nextPage: number | null; checkedAt: string; warnings: string[]; cached: boolean; total?: number; sourceResults: SourceResult[]; nextCursor?: string | null }
 export interface SourceOption { id: JobSource; name: string; enabled: boolean; note: string }
 const providers: JobSource[] = ['wanted', 'saramin', 'jumpit', 'zighang'];
 const api = `${import.meta.env.BASE_URL}api`;
@@ -35,16 +35,18 @@ export async function fetchSources(signal?: AbortSignal): Promise<SourceOption[]
   if (!Array.isArray(data.sources)) throw new Error('출처 정보를 읽을 수 없어요.');
   return data.sources.filter((s): s is SourceOption => s && providers.includes(s.id) && typeof s.enabled === 'boolean' && typeof s.name === 'string' && typeof s.note === 'string');
 }
-export async function searchRemoteJobs(source: SearchSource, query: string, location: string, page: number, signal?: AbortSignal, refresh = false, category = 'all', experience = 'all'): Promise<SearchResult> {
+export async function searchRemoteJobs(source: SearchSource, query: string, location: string, page: number, signal?: AbortSignal, refresh = false, category = 'all', experience = 'all', cursor?: string): Promise<SearchResult> {
   const params = new URLSearchParams({ source, q: query, location, category, experience, page: String(page), refresh: refresh ? '1' : '0' });
+  if (cursor !== undefined) params.set('cursor', cursor);
   const data = await request(`/jobs?${params}`, signal);
-  if (!Array.isArray(data.jobs) || data.jobs.length > 100 || typeof data.checkedAt !== 'string' || !Number.isFinite(Date.parse(data.checkedAt))) throw new Error('공고 목록 형식이 올바르지 않아요.');
+  if (data.nextCursor !== undefined && data.nextCursor !== null && (typeof data.nextCursor !== 'string' || data.nextCursor.length > 4096 || !/^[A-Za-z0-9_-]+$/.test(data.nextCursor))) throw new Error('이어보기 응답 형식이 올바르지 않아요.');
+  if (!Array.isArray(data.jobs) || data.jobs.length > 200 || typeof data.checkedAt !== 'string' || !Number.isFinite(Date.parse(data.checkedAt))) throw new Error('공고 목록 형식이 올바르지 않아요.');
   const jobs = data.jobs.map(parseRemoteJob);
   if (jobs.some(job => job.isDemo || job.verification !== 'source')) throw new Error('실제 출처가 확인되지 않은 결과는 표시하지 않아요.');
   const sourceResults: SourceResult[] = Array.isArray(data.sourceResults) ? data.sourceResults.filter((item): item is SourceResult => item && providers.includes(item.id) && typeof item.name === 'string' && Number.isInteger(item.count) && item.count >= 0 && ['ok', 'error'].includes(item.status) && (item.message === undefined || typeof item.message === 'string')) : [];
-  return { jobs, checkedAt: data.checkedAt, nextPage: Number.isInteger(data.nextPage) && Number(data.nextPage) > page && Number(data.nextPage) <= 49 ? Number(data.nextPage) : null,
+  return { jobs, checkedAt: data.checkedAt, nextPage: Number.isInteger(data.nextPage) && Number(data.nextPage) > page && Number(data.nextPage) <= 9999 ? Number(data.nextPage) : null,
     warnings: Array.isArray(data.warnings) ? data.warnings.filter((v): v is string => typeof v === 'string') : [], cached: data.cached === true,
-    total: Number.isSafeInteger(data.total) && Number(data.total) >= 0 ? Number(data.total) : undefined, sourceResults };
+    total: Number.isSafeInteger(data.total) && Number(data.total) >= 0 ? Number(data.total) : undefined, sourceResults, nextCursor: data.nextCursor as string | null | undefined };
 }
 export function sourceIdentity(job: Pick<Job, 'sourceUrl'>): { source: JobSource; id: string } | null {
   try {

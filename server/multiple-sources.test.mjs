@@ -107,7 +107,7 @@ test('filters are part of the cache key and refreshed source timestamps remain a
 test('invalid providers, filters and foreign IDs fail before contacting any source', async () => {
   let calls = 0;
   const service = createJobService({ env: {}, fetcher: async () => { calls++; throw new Error('Must not fetch'); } });
-  for (const filters of [{ provider: 'constructor' }, { location: 'not-a-region' }, { category: '__proto__' }, { experience: '-1' }, { page: 50 }]) await assert.rejects(service.search(filters), SourceError);
+  for (const filters of [{ provider: 'constructor' }, { location: 'not-a-region' }, { category: '__proto__' }, { experience: '-1' }, { page: 10000 }]) await assert.rejects(service.search(filters), SourceError);
   await assert.rejects(service.detail('zighang', '202'), error => error.code === 'BAD_ID');
   await assert.rejects(service.detail('jumpit', uuid), error => error.code === 'BAD_ID');
   await assert.rejects(service.detail('wanted', 'https://untrusted.invalid'), error => error.code === 'BAD_ID');
