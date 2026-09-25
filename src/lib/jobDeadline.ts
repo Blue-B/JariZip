@@ -14,8 +14,8 @@ export function jobDeadline(job: Pick<Job, 'deadline' | 'deadlineType' | 'status
     const countdown = expired ? '마감' : days === 0 ? '오늘 마감' : `D-${days}`;
     const shortDate = date.toLocaleDateString('ko-KR', { timeZone: 'Asia/Seoul', month: 'numeric', day: 'numeric' });
     const fullDate = date.toLocaleDateString('ko-KR', { timeZone: 'Asia/Seoul', year: 'numeric', month: 'long', day: 'numeric' });
-    return { label: `${shortDate} · ${countdown}`, detail: `${fullDate} (한국 날짜 기준 · 정확한 접수 종료 시각은 원문 확인)`, urgent: !expired && days <= 7, expired };
+    return { label: `${shortDate} · ${countdown}`, countdown, dateLabel: `${shortDate} 마감`, detail: `${fullDate} (한국 날짜 기준 · 정확한 접수 종료 시각은 원문 확인)`, urgent: !expired && days <= 7, expired };
   }
   const label = job.status === 'closed' ? '마감' : job.deadlineType === 'rolling' ? '상시채용' : job.deadlineType === 'until-filled' ? '채용 시 마감' : '마감일 미공개';
-  return { label, detail: label === '마감일 미공개' ? '출처에서 날짜를 제공하지 않아요. 원문을 확인해주세요.' : label, urgent: false, expired: job.status === 'closed' };
+  return { label, countdown: label, dateLabel: '', detail: label === '마감일 미공개' ? '출처에서 날짜를 제공하지 않아요. 원문을 확인해주세요.' : label, urgent: false, expired: job.status === 'closed' };
 }

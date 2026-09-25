@@ -1,0 +1,797 @@
+/* =============================================================================
+   JariZip — Studio surface (imported LAST from pages/Workspace.tsx)
+   Owner: visual refresh worker. Scope: `.workspace` and portal `.modal` only.
+
+   Why this sheet exists
+     The earlier layers (workspace.css → readability.css → product-workspace.css)
+     built the app up in three passes: legacy sky-blue chrome, a contrast pass,
+     then a cobalt theme. The result works but reads as generic product UI: pale
+     blue-grey surfaces, 8-11px micro type, soft gradient cards, and no clear
+     editorial hierarchy. This final sheet replaces that voice with a stationery /
+     careers-notebook one, without touching any layout component or the mascot.
+
+   Direction
+     - Warm paper #f6f3eb canvas, deep ink #202723 type, forest #244c3f primary,
+       small burnt-orange #a8542a accents. Hairline rules, not soft cards.
+     - Body copy at a real 14-16px with an honest hierarchy: 16px section titles,
+       15px subsections, 14px body, 13px meta floor (never below).
+     - Radii 8-12px, no gradients, no glow shadows, no endless rounded cards.
+     - Sidebar: pale sage field, strong forest active state, simplified footer.
+     - Jippi artwork, routes, copy semantics and keyboard behaviour are untouched.
+
+   Specificity note
+     Earlier sheets keep winning selectors but not values: this file restates the
+     same selector shape with the same or one extra class, so it wins on order.
+     `!important` appears only where a parent declared it (input sizes, saved
+     filter colours) — marked inline below.
+   ========================================================================== */
+
+/* ---------------------------------------------------------------------------
+   1. Tokens — paper, ink, forest, burnt orange
+   ------------------------------------------------------------------------ */
+.workspace,
+.modal {
+  --st-paper: #f6f3eb;
+  --st-paper-deep: #efeade;
+  --st-card: #fffdf9;
+  --st-sage: #e9ecdf;
+  --st-sage-deep: #dde2cf;
+  --st-ink: #202723;
+  --st-strong: #29332c;
+  --st-body: #3d4a43;
+  --st-muted: #5c6a62;
+  --st-faint: #7b877f;
+  --st-forest: #244c3f;
+  --st-forest-deep: #1b3a30;
+  --st-forest-soft: #e4ece4;
+  --st-orange: #a8542a;
+  --st-orange-deep: #8d431e;
+  --st-orange-soft: #f7e8dd;
+  --st-line: #ded7c7;
+  --st-line-soft: #ebe5d7;
+  --st-r-sm: 8px;
+  --st-r: 10px;
+  --st-r-lg: 12px;
+  --st-shadow: 0 1px 0 rgba(32, 39, 35, .04);
+
+  /* Redirect the older layers' tokens onto the studio palette so every
+     untouched feature rule inherits warm paper instead of pale blue. */
+  --pw-ink: var(--st-ink);
+  --pw-strong: var(--st-strong);
+  --pw-body: var(--st-body);
+  --pw-muted: var(--st-muted);
+  --pw-line: var(--st-line);
+  --pw-line-soft: var(--st-line-soft);
+  --pw-canvas: var(--st-paper);
+  --pw-card: var(--st-card);
+  --pw-sky: var(--st-forest-soft);
+  --pw-sky-strong: #d7e4d8;
+  --pw-cobalt: var(--st-forest);
+  --pw-cobalt-deep: var(--st-forest-deep);
+  --pw-radius: var(--st-r);
+  --pw-radius-sm: var(--st-r-sm);
+  --pw-shadow: var(--st-shadow);
+  --pw-shadow-soft: none;
+  --rz-body: var(--st-body);
+  --rz-muted: var(--st-muted);
+  --rz-strong: var(--st-strong);
+  --rz-ink: var(--st-ink);
+  --rz-cobalt: var(--st-forest);
+  --rz-green: #1f5c43;
+  --rz-orange: var(--st-orange-deep);
+  --brand: var(--st-forest);
+  --ink: var(--st-ink);
+  --muted: var(--st-muted);
+  --paper: var(--st-paper);
+  --line: var(--st-line);
+  --app-line: var(--st-line);
+  --blue-soft: var(--st-forest-soft);
+  --green: #1f5c43;
+  --orange: var(--st-orange-deep);
+  --card: var(--st-card);
+}
+
+.workspace {
+  background: var(--st-paper);
+  color: var(--st-body);
+  font-family: var(--font);
+}
+
+/* ---------------------------------------------------------------------------
+   2. Type scale — one honest step per tier, nothing under 13px
+   ------------------------------------------------------------------------ */
+.workspace .app-main { font-size: 14px; line-height: 1.7; color: var(--st-body); }
+
+.workspace .page-heading h1,
+.workspace .dashboard-greeting h1,
+.workspace .discover-heading h1 {
+  font-size: clamp(22px, 2.1vw, 26px);
+  font-weight: 760;
+  letter-spacing: -0.6px;
+  color: var(--st-ink);
+}
+.workspace .page-description { font-size: 14px; line-height: 1.8; color: var(--st-body); }
+.workspace .section-title h2 { font-size: 16px; font-weight: 700; letter-spacing: -0.3px; color: var(--st-ink); }
+.workspace .section-title span { font-size: 13px; color: var(--st-muted); }
+.workspace .subsection-heading { font-size: 15px; font-weight: 700; color: var(--st-strong); }
+
+/* The old voice used a tiny uppercase cobalt eyebrow everywhere; here it becomes
+   a quiet stationery label, and it stays hidden where a title already says it. */
+.workspace .eyebrow,
+.workspace .hero-mini-label,
+.workspace .discover-heading .eyebrow {
+  font-family: var(--font);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: var(--st-orange);
+  text-transform: uppercase;
+}
+.workspace .eyebrow.small { font-size: 11.5px; letter-spacing: 0.06em; }
+
+/* Body copy, notes and prose */
+.workspace .prose-text,
+.workspace .history-entry-body > .prose-text { font-size: 14px; line-height: 1.95; color: var(--st-body); }
+.workspace .confirm-description { font-size: 14px; line-height: 1.85; color: var(--st-body); }
+.workspace .note { font-size: 13px; line-height: 1.8; background: var(--st-paper-deep); color: var(--st-body); border-radius: var(--st-r-sm); }
+.workspace .note--blue { background: var(--st-forest-soft); color: #2f4a3c; }
+.workspace .note--orange { background: var(--st-orange-soft); color: #7a3f1c; }
+.workspace .local-note { font-size: 12.5px; color: var(--st-muted); }
+.workspace .field-hint { font-size: 13px; line-height: 1.75; color: var(--st-muted); }
+.workspace .field-label,
+.workspace .stack-form label,
+.workspace .editor-meta label { font-size: 13.5px; font-weight: 650; color: var(--st-strong); }
+.workspace .empty-state h3 { font-size: 17px; color: var(--st-ink); }
+.workspace .empty-state p { font-size: 14px; line-height: 1.85; color: var(--st-muted); }
+.workspace .empty-icon { background: var(--st-paper-deep); color: var(--st-faint); border-radius: var(--st-r); }
+.workspace .count-bubble { background: var(--st-paper-deep); color: var(--st-body); border-radius: 6px; font-size: 12px; }
+
+/* Meta captions keep a floor. Anything that was 7-10px lands here. */
+.workspace .workspace-footnote,
+.workspace .workspace-footnote span:last-child,
+.workspace .sidebar-github,
+.workspace .board-hint,
+.workspace .job-list-foot,
+.workspace .job-list-foot > span:not(.tag),
+.workspace .nav-caption { font-size: 12px; }
+
+/* Chips and tags */
+.workspace .tag {
+  padding: 3px 9px;
+  border-radius: 999px;
+  background: var(--st-paper-deep);
+  color: var(--st-body);
+  font-size: 12px;
+  font-weight: 600;
+}
+.workspace .tag--blue { background: var(--st-forest-soft); color: #2d4a3c; }
+.workspace .tag--green { background: #e2efe5; color: #1f5c43; }
+.workspace .tag--orange { background: var(--st-orange-soft); color: var(--st-orange-deep); }
+.workspace .tag--violet { background: #ece6f1; color: #5a4275; }
+
+/* ---------------------------------------------------------------------------
+   3. Sidebar — pale sage field, forest active state, simplified footer
+   ------------------------------------------------------------------------ */
+.workspace { --sidebar-width: 244px; }
+.workspace .sidebar {
+  background: var(--st-sage);
+  border-right: 1px solid var(--st-sage-deep);
+  padding: 22px 14px 18px;
+}
+.workspace .wordmark { font-family: var(--font); font-size: 21px; letter-spacing: -0.7px; }
+.workspace .wordmark-ko { font-family: var(--font); color: var(--st-ink); }
+.workspace .wordmark-latin { font-family: var(--font-num); color: var(--st-forest); }
+.workspace .wordmark .brand-period { color: var(--st-orange); }
+
+.workspace .workspace-switch {
+  background: rgba(255, 255, 255, .6);
+  border: 1px solid var(--st-sage-deep);
+  border-radius: var(--st-r-sm);
+  padding: 10px 11px;
+}
+.workspace .workspace-switch strong { font-size: 13.5px; color: var(--st-ink); }
+.workspace .workspace-switch span { font-size: 12px; color: var(--st-muted); }
+.workspace .workspace-avatar { background: var(--st-forest); color: #f2f6f0; border-radius: 7px; font-size: 12.5px; }
+
+.workspace .nav-caption {
+  font-family: var(--font);
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--st-faint);
+  padding-inline: 12px;
+}
+.workspace .sidebar nav { gap: 2px; }
+.workspace .nav-item {
+  gap: 11px;
+  min-height: 42px;
+  padding: 9px 12px;
+  border-radius: var(--st-r-sm);
+  font-size: 14px;
+  font-weight: 550;
+  color: #3c4a40;
+}
+.workspace .nav-item > svg { color: #61705f; }
+.workspace .nav-item:hover { background: rgba(255, 255, 255, .62); color: var(--st-forest); }
+.workspace .nav-item:hover > svg { color: var(--st-forest); }
+.workspace .nav-item.active {
+  background: var(--st-forest);
+  color: #f4f7f0;
+  font-weight: 700;
+  box-shadow: none;
+}
+.workspace .nav-item.active > svg { color: #e7d9c4; }
+.workspace .nav-count { background: rgba(255, 255, 255, .7); color: #4a5a4b; font-size: 12px; border-radius: 6px; }
+.workspace .nav-item.active .nav-count { background: rgba(255, 255, 255, .16); color: #f1efe4; }
+.workspace .nav-divider { margin-top: 16px; }
+.workspace .nav-divider::before { background: var(--st-sage-deep); }
+
+.workspace .sidebar-footer { padding-top: 20px; gap: 10px; }
+/* The character keeps its place; the panel becomes a caption, not a card. */
+.workspace .jippi-tip {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 10px 4px 12px;
+  border: 0;
+  border-top: 1px solid var(--st-sage-deep);
+  border-radius: 0;
+  background: none;
+}
+.workspace .jippi-tip-art { width: 46px; height: 46px; }
+.workspace .jippi-tip strong { font-size: 12.5px; font-weight: 750; color: var(--st-strong); letter-spacing: 0.02em; }
+.workspace .jippi-tip p { font-size: 12.5px; line-height: 1.7; color: #46564a; margin: 3px 0 6px; }
+.workspace .jippi-tip a { font-size: 12.5px; font-weight: 700; color: var(--st-forest); }
+.workspace .jippi-tip a:hover { color: var(--st-orange); }
+
+/* Privacy furniture: one line, one link. The detail lives in Settings. */
+.workspace .privacy-card {
+  background: none;
+  border: 0;
+  border-top: 1px solid var(--st-sage-deep);
+  border-radius: 0;
+  padding: 12px 4px 4px;
+  color: var(--st-muted);
+}
+.workspace .privacy-card > svg { display: none; }
+.workspace .privacy-card strong { font-size: 12.5px; font-weight: 700; color: var(--st-strong); }
+.workspace .privacy-card p { font-size: 12.5px; line-height: 1.7; color: #46564a; margin: 4px 0 6px; }
+.workspace .privacy-card a { font-size: 12.5px; font-weight: 650; color: var(--st-forest); }
+.workspace .privacy-card a:hover { color: var(--st-orange); }
+.workspace .privacy-card p br { display: none; }
+.workspace .privacy-card p br + br { display: none; }
+.workspace .sidebar-github { padding: 14px 4px 0; border-top: 1px solid var(--st-sage-deep); color: var(--st-faint); }
+.workspace .sidebar-github:hover { color: var(--st-forest); }
+
+/* ---------------------------------------------------------------------------
+   4. Topbar, main column and footer
+   ------------------------------------------------------------------------ */
+.workspace .topbar {
+  height: 66px;
+  padding-inline: 30px;
+  border-bottom: 1px solid var(--st-line);
+  background: rgba(246, 243, 235, .92);
+  backdrop-filter: saturate(1.1) blur(8px);
+}
+.workspace .topbar-location { font-size: 13.5px; color: var(--st-body); }
+.workspace .topbar-location > svg { color: var(--st-faint); }
+.workspace .breadcrumb-root { color: var(--st-muted); }
+.workspace .topbar-search {
+  font-size: 13.5px;
+  color: var(--st-body);
+  border: 1px solid var(--st-line);
+  background: var(--st-card);
+  border-radius: var(--st-r-sm);
+  padding: 6px 11px;
+}
+.workspace .topbar-search:hover { border-color: #c7bfa9; color: var(--st-forest); }
+.workspace .topbar-search kbd {
+  font-family: var(--font-num);
+  font-size: 11.5px;
+  background: var(--st-paper-deep);
+  border: 1px solid var(--st-line);
+  color: var(--st-muted);
+}
+.workspace .save-status { font-size: 12.5px; color: #2c6046; }
+.workspace .save-status--saving { color: var(--st-muted); }
+.workspace .save-status--error,
+.workspace .save-status--temporary { color: var(--st-orange-deep); }
+.workspace .header-avatar {
+  width: 32px;
+  height: 32px;
+  background: var(--st-forest);
+  color: #f2f6f0;
+  font-size: 12.5px;
+  border: 0;
+  border-radius: 7px;
+  box-shadow: none;
+}
+.workspace .icon-button { border-radius: var(--st-r-sm); color: var(--st-muted); }
+.workspace .icon-button:hover { background: var(--st-paper-deep); color: var(--st-forest); }
+
+.workspace .app-main { max-width: 1440px; padding: 30px 34px 40px; }
+.workspace .workspace-footnote { max-width: 1440px; padding: 0 34px 22px; color: var(--st-faint); }
+.workspace .storage-warning { background: var(--st-orange-soft); color: #7a3f1c; font-size: 13.5px; }
+.workspace .legacy-samples {
+  margin: 14px 34px 0;
+  border: 1px solid var(--st-line);
+  border-left: 3px solid var(--st-orange);
+  border-radius: var(--st-r-sm);
+  background: var(--st-card);
+  font-size: 13.5px;
+}
+
+/* ---------------------------------------------------------------------------
+   5. Surfaces — paper cards with a rule, not floating rounded blobs
+   ------------------------------------------------------------------------ */
+.workspace .panel,
+.workspace .section-panel {
+  background: var(--st-card);
+  border: 1px solid var(--st-line);
+  border-radius: var(--st-r);
+  box-shadow: none;
+}
+.workspace .section-title { padding: 20px 22px 14px; border-bottom: 1px solid var(--st-line-soft); }
+.workspace .section-title > div { gap: 8px; }
+.workspace .stats-strip,
+.workspace .job-filters,
+.workspace .company-directory,
+.workspace .company-workspace,
+.workspace .job-detail,
+.workspace .job-list-card,
+.workspace .job-list-card.selected,
+.workspace .application-card,
+.workspace .document-card,
+.workspace .template-card,
+.workspace .submission-explainer,
+.workspace .interview-session-bar,
+.workspace .question-sidebar,
+.workspace .question-stage,
+.workspace .answer-section,
+.workspace .dash-empty,
+.workspace .upload-zone,
+.workspace .template-intro,
+.workspace .kanban-column {
+  background: var(--st-card);
+  border: 1px solid var(--st-line);
+  border-radius: var(--st-r);
+  box-shadow: none;
+}
+.workspace .kanban-column { background: var(--st-paper-deep); }
+.workspace .stats-strip { padding: 0; }
+.workspace .stat-item { padding: 20px 24px; border-right: 1px solid var(--st-line); }
+.workspace .stat-item:hover { background: var(--st-paper-deep); }
+.workspace .stat-value,
+.workspace .backup-summary strong,
+.workspace .company-profile-stats strong,
+.workspace .weekly-number {
+  font-family: var(--font-num);
+  font-size: 30px;
+  font-weight: 700;
+  letter-spacing: -1px;
+  color: var(--st-forest);
+}
+.workspace .stat-value span,
+.workspace .weekly-number span { font-family: var(--font); font-size: 13px; color: var(--st-muted); }
+.workspace .stat-label { font-size: 13.5px; color: var(--st-body); }
+.workspace .stat-sub { font-size: 12.5px; color: var(--st-muted); }
+.workspace .stats-strip .stat-item:last-child { border-right: 0; }
+
+/* The dashboard hero becomes a warm editorial header, not a sky-blue gradient. */
+.workspace .dashboard-hero,
+.workspace .welcome-banner {
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
+  background: var(--st-card);
+  border: 1px solid var(--st-line);
+  border-left: 4px solid var(--st-forest);
+  border-radius: var(--st-r);
+  min-height: 232px;
+  overflow: hidden;
+}
+.workspace .dashboard-hero-copy { padding: 30px 20px 30px 32px; }
+.workspace .dashboard-hero h2,
+.workspace .welcome-copy h2 {
+  font-size: clamp(21px, 2.2vw, 26px);
+  font-weight: 780;
+  letter-spacing: -0.7px;
+  line-height: 1.42;
+  color: var(--st-ink);
+}
+.workspace .dashboard-hero h2 em { font-style: normal; color: var(--st-forest); }
+.workspace .dashboard-hero-copy > p { font-size: 14px; line-height: 1.8; color: var(--st-body); }
+.workspace .hero-mini-label { color: var(--st-orange); letter-spacing: 0.08em; }
+.workspace .hero-mini-label > span { background: var(--st-orange); }
+.workspace .hero-orbit { border-color: var(--st-line); }
+.workspace .hero-bottom-strip {
+  border-top: 1px solid var(--st-line);
+  background: var(--st-paper-deep);
+  color: var(--st-muted);
+  font-size: 12.5px;
+}
+.workspace .tiny-orbit-card {
+  border: 1px solid var(--st-line);
+  background: var(--st-card);
+  color: var(--st-body);
+  font-size: 12.5px;
+  box-shadow: none;
+}
+.workspace .tiny-orbit-card svg { color: var(--st-forest); }
+.workspace .weekly-goal {
+  background: var(--st-forest-soft);
+  border: 1px solid #ccd9cc;
+  border-radius: var(--st-r);
+}
+.workspace .weekly-goal h3 { color: #1f3d31; font-size: 15px; }
+.workspace .weekly-goal > p,
+.workspace .weekly-goal-top .eyebrow { color: #3f5a4a; }
+.workspace .weekly-goal-top a { color: var(--st-forest); }
+.workspace .weekly-goal .progress-track { background: #c9d8ca; }
+.workspace .weekly-goal .progress-track span { background: var(--st-forest); }
+
+/* Job + application rows: compact but readable, separated by rules. */
+.workspace .job-list-main h3 { font-size: 14.5px; font-weight: 680; color: var(--st-ink); line-height: 1.55; }
+.workspace .job-list-main .company-line { font-size: 12.5px; color: var(--st-muted); }
+.workspace .job-list-main p { font-size: 13px; color: var(--st-muted); line-height: 1.7; }
+.workspace .job-list-card:hover { border-color: #c9c0aa; }
+.workspace .job-list-card.selected { border-color: var(--st-forest); background: #f8faf6; }
+.workspace .job-list-card.selected .job-list-main h3 { color: var(--st-forest); }
+.workspace .job-list-foot { border-top: 1px solid var(--st-line-soft); }
+.workspace .job-detail-header h2 { font-size: 21px; font-weight: 760; letter-spacing: -0.5px; color: var(--st-ink); line-height: 1.45; }
+.workspace .job-detail-kicker { font-size: 13px; color: var(--st-muted); }
+.workspace .job-detail-meta { font-size: 13px; color: var(--st-muted); }
+.workspace .job-detail-meta svg { color: var(--st-forest); }
+.workspace .job-detail-content > h3 { font-size: 14.5px; font-weight: 700; color: var(--st-strong); }
+.workspace .job-detail-content > .prose-text { font-size: 14px; line-height: 1.95; color: var(--st-body); }
+.workspace .verification-note { background: var(--st-paper-deep); border-radius: var(--st-r-sm); color: var(--st-body); }
+.workspace .verification-note strong { font-size: 13px; color: var(--st-strong); }
+.workspace .verification-note p { font-size: 12.5px; color: var(--st-muted); }
+.workspace .job-information { border-top: 1px solid var(--st-line-soft); }
+.workspace .job-information > span { font-size: 12.5px; color: var(--st-muted); }
+.workspace .job-information strong { font-size: 13px; color: var(--st-body); }
+.workspace .job-detail-actions { border-top: 1px solid var(--st-line); background: var(--st-card); }
+
+.workspace .application-card { padding: 13px 13px 0; }
+.workspace .app-card-main h3 { font-size: 13.5px; font-weight: 660; color: var(--st-ink); line-height: 1.7; }
+.workspace .app-card-main > span { font-size: 12.5px; color: var(--st-muted); }
+.workspace .app-card-documents,
+.workspace .app-card-footer > span,
+.workspace .app-card-footer > select { font-size: 12px; color: var(--st-faint); }
+.workspace .app-card-date { background: var(--st-orange-soft); color: var(--st-orange-deep); font-size: 12px; border-radius: 5px; }
+.workspace .kanban-column h2 { font-size: 14px; font-weight: 700; color: var(--st-strong); }
+.workspace .board-summary { font-size: 13px; color: var(--st-muted); }
+.workspace .column-count { font-family: var(--font-num); font-size: 12.5px; color: var(--st-faint); }
+.workspace .empty-column { border: 1px dashed #cfc7b3; color: var(--st-faint); font-size: 12.5px; }
+
+/* Documents, templates and settings share the paper treatment. */
+.workspace .document-card-body > p { font-size: 12.5px; color: var(--st-muted); }
+.workspace .document-title > button { font-size: 14px; font-weight: 650; color: var(--st-strong); }
+.workspace .document-card-footer > span { font-size: 12px; color: var(--st-faint); }
+.workspace .mini-paper,
+.workspace .template-mini-page,
+.workspace .document-paper { border-color: var(--st-line); }
+.workspace .setting-row,
+.workspace .settings-section .stack-form label { font-size: 13.5px; }
+.workspace .privacy-poster { background: var(--st-sage); border: 1px solid var(--st-sage-deep); border-radius: var(--st-r); }
+.workspace .privacy-poster h2 { color: #2c4636; font-size: 23px; }
+.workspace .privacy-poster .eyebrow,
+.workspace .privacy-poster > p,
+.workspace .privacy-poster > small { color: #46564a; }
+.workspace .privacy-seal { background: #dbe3d5; border-color: #c8d2c0; color: #6e7f66; }
+.workspace .backup-summary { background: var(--st-paper-deep); border: 1px solid var(--st-line-soft); border-radius: var(--st-r-sm); }
+.workspace .integration-rows > button { border-top: 1px solid var(--st-line-soft); }
+.workspace .integration-icon,
+.workspace .settings-icon { background: var(--st-forest-soft); color: var(--st-forest); border-radius: var(--st-r-sm); }
+.workspace .enabled-feature { background: var(--st-forest-soft); color: #33513f; border-radius: var(--st-r-sm); }
+
+/* ---------------------------------------------------------------------------
+   6. Controls — forest actions, warm secondary, 8-10px corners
+   ------------------------------------------------------------------------ */
+.workspace .button,
+.modal .button { border-radius: var(--st-r-sm); font-size: 13.5px; min-height: 40px; font-weight: 650; }
+.workspace .button.primary,
+.modal .button.primary { background: var(--st-forest); color: #f6f8f4; box-shadow: none; }
+.workspace .button.primary:hover:not(:disabled),
+.modal .button.primary:hover:not(:disabled) { background: var(--st-forest-deep); box-shadow: none; }
+.workspace .button.secondary,
+.modal .button.secondary { background: var(--st-card); border-color: var(--st-line); color: var(--st-strong); }
+.workspace .button.secondary:hover:not(:disabled),
+.modal .button.secondary:hover:not(:disabled) { border-color: var(--st-forest); color: var(--st-forest); background: var(--st-card); }
+.workspace .button.ghost { color: var(--st-muted); }
+.workspace .button.ghost:hover:not(:disabled) { background: var(--st-paper-deep); color: var(--st-ink); }
+.workspace .button.danger,
+.modal .button.danger { background: var(--st-orange-soft); border-color: #e8cdb9; color: #86401c; }
+.workspace .button:active:not(:disabled) { transform: none; }
+
+.workspace .text-link,
+.modal .text-link { font-size: 13.5px; font-weight: 700; color: var(--st-forest); }
+.workspace .text-link:hover,
+.modal .text-link:hover { color: var(--st-orange-deep); }
+
+.workspace .search-input,
+.modal .search-input { border: 1px solid var(--st-line); background: var(--st-card); border-radius: var(--st-r-sm); }
+.workspace .search-input input,
+.modal .search-input input { font-size: 14px !important; }
+.workspace .search-input:focus-within,
+.modal .search-input:focus-within { border-color: var(--st-forest); box-shadow: 0 0 0 3px rgba(36, 76, 63, .12); }
+
+.workspace .category-tabs { gap: 6px; border-bottom: 1px solid var(--st-line); padding-bottom: 12px; }
+.workspace .category-tabs button { border-radius: var(--st-r-sm); font-size: 13.5px; font-weight: 620; color: var(--st-muted); min-height: 38px; }
+.workspace .category-tabs button:hover { background: var(--st-paper-deep); color: var(--st-forest); }
+.workspace .category-tabs button.selected { background: var(--st-forest); color: #f6f8f4; box-shadow: none; }
+.workspace .category-tabs button span { font-family: var(--font-num); font-size: 12px; }
+
+.workspace .detail-tabs { border-bottom: 1px solid var(--st-line); }
+.workspace .detail-tabs button { font-size: 13.5px; font-weight: 620; color: var(--st-muted); }
+.workspace .detail-tabs button.active { color: var(--st-forest); font-weight: 750; }
+.workspace .detail-tabs button.active:after { background: var(--st-forest); height: 2px; }
+
+.workspace .view-switch { background: var(--st-paper-deep); border: 1px solid var(--st-line); border-radius: var(--st-r-sm); padding: 3px; }
+.workspace .view-switch > button { border-radius: 6px; color: var(--st-faint); }
+.workspace .view-switch > button.active { background: var(--st-card); color: var(--st-forest); box-shadow: none; }
+.workspace .saved-filter {
+  border: 1px solid var(--st-line);
+  background: var(--st-card);
+  border-radius: var(--st-r-sm);
+  color: var(--st-body);
+  font-size: 13px;
+}
+.workspace .saved-filter > span { font-family: var(--font-num); color: var(--st-muted); }
+.workspace .saved-filter.selected { background: var(--st-forest); border-color: var(--st-forest); color: #f6f8f4; /* parent used !important colour */ }
+.workspace .saved-filter.selected > span { color: #dfe8dc; }
+
+.workspace .select-shell { border: 1px solid var(--st-line); background: var(--st-card); border-radius: var(--st-r-sm); color: var(--st-muted); }
+.workspace .select-shell select { font-size: 13.5px !important; color: var(--st-body); }
+
+.workspace .company-mark { border-radius: var(--st-r-sm); background: var(--st-forest-soft); color: var(--st-forest); font-weight: 750; }
+.workspace .company-mark.small { border-radius: 7px; }
+.workspace .mark--green { background: #e2efe5; color: #1f5c43; }
+.workspace .mark--orange { background: var(--st-orange-soft); color: var(--st-orange-deep); }
+.workspace .mark--violet { background: #ece6f1; color: #5a4275; }
+.workspace .mark--ink { background: #e6e7e1; color: #38443b; }
+
+.workspace .check-item { font-size: 13px; color: var(--st-body); }
+.workspace .check-item > span { background: var(--st-paper-deep); border-color: var(--st-line); }
+.workspace .check-item.checked { color: #1f5c43; }
+.workspace .check-item.checked > span { background: var(--st-forest-soft); border-color: #b6ccb8; color: #1f5c43; }
+.workspace input[type=checkbox],
+.workspace input[type=radio] { accent-color: var(--st-forest); }
+.workspace .progress-track { background: var(--st-paper-deep); border-radius: 999px; }
+.workspace .progress-track span { background: var(--st-forest); border-radius: 999px; }
+
+/* ---------------------------------------------------------------------------
+   7. Forms — inputs inherit the paper language globally
+   ------------------------------------------------------------------------ */
+.workspace input:not([type=checkbox]):not([type=radio]):not([type=file]),
+.workspace textarea,
+.workspace select,
+.modal input:not([type=checkbox]):not([type=radio]):not([type=file]),
+.modal textarea,
+.modal select {
+  border: 1px solid var(--st-line);
+  background: var(--st-card);
+  border-radius: var(--st-r-sm);
+  font-size: 14px;
+  color: var(--st-strong);
+}
+.workspace input:focus,
+.workspace textarea:focus,
+.workspace select:focus,
+.modal input:focus,
+.modal textarea:focus,
+.modal select:focus { border-color: var(--st-forest) !important; box-shadow: 0 0 0 3px rgba(36, 76, 63, .12); }
+.workspace input::placeholder,
+.workspace textarea::placeholder,
+.modal input::placeholder,
+.modal textarea::placeholder { color: #8b938c; }
+
+/* ---------------------------------------------------------------------------
+   8. Composed sections that the older sheets styled as blue panels
+   ------------------------------------------------------------------------ */
+.workspace .board-toolbar { padding: 14px 0 20px; border-bottom: 1px solid var(--st-line); }
+.workspace .interview-cta,
+.workspace .submission-explainer-icon,
+.workspace .interview-cta-icon,
+.workspace .match-symbol,
+.workspace .quick-document-icon,
+.workspace .document-icon,
+.workspace .settings-icon { background: var(--st-forest-soft); color: var(--st-forest); }
+.workspace .interview-cta { background: var(--st-forest-soft); border: 1px solid #cfdccf; border-radius: var(--st-r); }
+.workspace .interview-cta strong { color: #24402f; font-size: 14px; }
+.workspace .interview-cta p { color: #3f5a4a; font-size: 13px; }
+.workspace .question-source { background: var(--st-paper-deep); border-left: 2px solid var(--st-forest); border-radius: 0 var(--st-r-sm) var(--st-r-sm) 0; }
+.workspace .question-source > svg { color: var(--st-forest); }
+.workspace .question-source strong { color: var(--st-strong); font-size: 13px; }
+.workspace .question-source p { color: var(--st-body); font-size: 13.5px; }
+.workspace .answer-hint { background: #faf5ea; border: 1px solid #ecdfc7; border-radius: var(--st-r-sm); }
+.workspace .answer-hint strong { color: #7a5a1e; font-size: 13.5px; }
+.workspace .answer-hint p { color: #6b5a35; font-size: 13px; }
+.workspace .answer-hint > span { color: #7d6e4c; border-top: 1px solid #ecdfc7; font-size: 12.5px; }
+.workspace .question-nav-item { border-radius: var(--st-r-sm); color: var(--st-muted); }
+.workspace .question-nav-item:hover { background: var(--st-paper-deep); }
+.workspace .question-nav-item.active { background: var(--st-forest-soft); border-color: #cfdccf; }
+.workspace .question-nav-item.active > span { background: var(--st-forest); border-color: var(--st-forest); color: #f6f8f4; }
+.workspace .question-nav-item strong { color: var(--st-body); font-size: 13px; }
+.workspace .question-nav-item.active strong { color: var(--st-forest); }
+.workspace .question-nav-item > span { border-color: var(--st-line); background: var(--st-card); color: var(--st-muted); }
+.workspace .question-nav-item > span.answered { background: var(--st-forest-soft); border-color: #cfdccf; color: #2f5c44; }
+.workspace .question-sidebar-note { border-top: 1px solid var(--st-line-soft); }
+.workspace .question-sidebar-note p { color: var(--st-muted); font-size: 12.5px; }
+.workspace .question-stage h2 { font-size: 19px; color: var(--st-ink); }
+.workspace .session-mode { border-left: 1px solid var(--st-line); }
+.workspace .session-mode > button.active { background: var(--st-forest-soft); color: var(--st-forest); }
+.workspace .practice-history-entry { border: 1px solid var(--st-line); border-radius: var(--st-r-sm); }
+.workspace .history-entry-icon { background: var(--st-forest-soft); color: var(--st-forest); }
+.workspace .voice-controls > .button.recording-button { background: var(--st-orange-soft); color: var(--st-orange-deep); border-color: #e8cdb9; }
+.workspace .audio-preview { background: var(--st-paper-deep); border-radius: var(--st-r-sm); }
+.workspace .answer-confidence button { border: 1px solid var(--st-line); background: var(--st-card); color: var(--st-muted); border-radius: var(--st-r-sm); font-size: 13px; }
+.workspace .answer-confidence button.selected { background: var(--st-forest-soft); border-color: #b6ccb8; color: var(--st-forest); }
+.workspace .answer-actions { border-top: 1px solid var(--st-line); }
+.workspace .match-block { border-top: 1px solid var(--st-line); }
+.workspace .match-block h3 { font-size: 14px; color: var(--st-strong); }
+.workspace .match-block > p { font-size: 13px; color: var(--st-muted); }
+.workspace .match-intro h3 { font-size: 17px; color: var(--st-ink); }
+.workspace .match-intro p { font-size: 13px; color: var(--st-muted); }
+.workspace .company-note-preview { background: var(--st-paper-deep); border-radius: var(--st-r-sm); }
+.workspace .application-table th { background: var(--st-paper-deep); color: var(--st-muted); font-size: 13px; border-bottom: 1px solid var(--st-line); }
+.workspace .application-table td { font-size: 13.5px; color: var(--st-body); border-bottom: 1px solid var(--st-line-soft); }
+.workspace .table-company strong { font-size: 14px; color: var(--st-strong); }
+.workspace .table-company > span:last-child > span { font-size: 13px; color: var(--st-muted); }
+.workspace .company-directory-item { border-radius: var(--st-r-sm); color: var(--st-body); }
+.workspace .company-directory-item:hover { background: var(--st-paper-deep); }
+.workspace .company-directory-item.selected { background: var(--st-forest-soft); border-color: #cfdccf; }
+.workspace .company-directory-item strong { font-size: 13.5px; color: var(--st-strong); }
+.workspace .company-directory-item > div > span { font-size: 12px; color: var(--st-faint); }
+.workspace .directory-count { font-size: 12px; color: var(--st-faint); }
+.workspace .company-profile-header h2 { font-size: 20px; color: var(--st-ink); }
+.workspace .company-profile-header .eyebrow { color: var(--st-orange); }
+.workspace .company-profile-header > div:nth-child(2) > span { font-size: 13px; color: var(--st-muted); }
+.workspace .company-profile-stats > span { font-size: 12.5px; color: var(--st-muted); }
+.workspace .company-note-toolbar h3 { font-size: 14px; color: var(--st-strong); }
+.workspace .research-checks > div > span { border-color: var(--st-line); color: var(--st-muted); font-size: 12.5px; border-radius: 5px; }
+.workspace .about-product-link { border: 1px solid var(--st-line); background: var(--st-card); border-radius: var(--st-r-sm); }
+.workspace .about-product-link strong { color: var(--st-forest); font-size: 13.5px; }
+
+/* ---------------------------------------------------------------------------
+   9. Modals and dialogs — portal-safe, same paper language
+   ------------------------------------------------------------------------ */
+.modal {
+  border: 1px solid var(--st-line);
+  border-radius: var(--st-r-lg);
+  background: var(--st-card);
+  color: var(--st-body);
+  box-shadow: 0 22px 70px -30px rgba(32, 39, 35, .5);
+}
+.modal::backdrop { background: rgba(32, 39, 35, .42); backdrop-filter: blur(3px); }
+.modal-header { border-bottom: 1px solid var(--st-line); }
+.modal-header h2 { font-size: 20px; font-weight: 760; letter-spacing: -0.4px; color: var(--st-ink); }
+.modal-header p { font-size: 13.5px; line-height: 1.8; color: var(--st-muted); }
+.modal .modal-body { font-size: 14px; }
+.modal--drawer { border-radius: 0; border-left: 1px solid var(--st-line); }
+.modal .notification-item { border-bottom: 1px solid var(--st-line-soft); }
+.modal .notification-item strong { font-size: 14px; color: var(--st-ink); }
+.modal .notification-item span { font-size: 13px; color: var(--st-muted); }
+.modal .notification-item > svg { color: var(--st-forest); }
+.modal .command-results button { background: transparent; border-radius: var(--st-r-sm); font-size: 14px; color: var(--st-body); }
+.modal .command-results button:hover { background: var(--st-paper-deep); }
+.modal .command-results button > svg { color: var(--st-faint); }
+.modal .command-input kbd { font-family: var(--font-num); border-color: var(--st-line); color: var(--st-muted); }
+.modal .detail-tabs { border-bottom: 1px solid var(--st-line); }
+.modal .detail-tabs button { font-size: 13.5px; color: var(--st-muted); }
+.modal .detail-tabs button.active { color: var(--st-forest); }
+.modal .detail-tabs button.active:after { background: var(--st-forest); }
+.modal .document-picker > label { border: 1px solid var(--st-line); border-radius: var(--st-r-sm); }
+.modal .document-picker > label.selected { border-color: var(--st-forest); background: #f8faf6; }
+.modal .verification-options > label { border: 1px solid var(--st-line); border-radius: var(--st-r-sm); }
+.modal .verification-options > label.selected { border-color: var(--st-forest); background: #f8faf6; }
+.modal .submission-history { border: 1px solid var(--st-line); border-radius: var(--st-r-sm); }
+.modal .snapshot-header .tag { font-size: 12px; }
+
+/* Toast, overlay and mobile chrome */
+.workspace .toast,
+.toast {
+  border-radius: var(--st-r);
+  background: var(--st-ink);
+  color: #f4f2ea;
+  font-size: 13.5px;
+  box-shadow: 0 14px 40px -18px rgba(32, 39, 35, .65);
+}
+.toast svg { color: #a9c8a6; }
+.workspace .sidebar-overlay { background: rgba(32, 39, 35, .38); }
+.workspace .mobile-bottom-nav {
+  background: var(--st-card);
+  border-top: 1px solid var(--st-line);
+  box-shadow: 0 -1px 0 rgba(32, 39, 35, .04);
+  backdrop-filter: blur(10px);
+}
+.workspace .bottom-nav-item { color: var(--st-muted); font-size: 12px; font-weight: 620; }
+.workspace .bottom-nav-item.active { color: var(--st-forest); }
+.workspace .bottom-nav-item.active svg { color: var(--st-forest); }
+.workspace .skip-link { background: var(--st-forest); border-radius: var(--st-r-sm); }
+.workspace ::selection { background: #d8e4d4; color: #1b3a30; }
+
+/* ---------------------------------------------------------------------------
+   10. Focus — visible on every interactive surface, ink + forest ring
+   ------------------------------------------------------------------------ */
+.workspace button:focus-visible,
+.workspace a:focus-visible,
+.workspace input:focus-visible,
+.workspace textarea:focus-visible,
+.workspace select:focus-visible,
+.workspace summary:focus-visible,
+.workspace [tabindex]:focus-visible,
+.modal button:focus-visible,
+.modal a:focus-visible,
+.modal input:focus-visible,
+.modal textarea:focus-visible,
+.modal select:focus-visible,
+.modal [tabindex]:focus-visible {
+  outline: 2px solid var(--st-forest);
+  outline-offset: 2px;
+  border-radius: var(--st-r-sm);
+}
+.workspace .nav-item:focus-visible,
+.workspace .mobile-bottom-nav a:focus-visible,
+.workspace .mobile-bottom-nav button:focus-visible { outline-color: var(--st-ink); outline-offset: 1px; }
+
+/* ---------------------------------------------------------------------------
+   11. Responsive — 360px safe, no horizontal overflow
+   ------------------------------------------------------------------------ */
+@media (max-width: 1100px) {
+  .workspace .app-main { padding: 26px 24px 34px; }
+  .workspace .workspace-footnote { padding-inline: 24px; }
+  .workspace .job-explorer { grid-template-columns: minmax(0, 1fr); }
+  /* The larger filter type needs rows that can wrap instead of overflowing. */
+  .workspace .job-filters { flex-wrap: wrap; }
+  .workspace .select-shell { flex: 1 1 132px; min-width: 104px; }
+  .workspace .board-toolbar,
+  .workspace .board-tools { flex-wrap: wrap; }
+}
+@media (max-width: 760px) {
+  .workspace .app-main { padding: 20px 16px 92px; font-size: 14px; }
+  .workspace .workspace-footnote { padding: 0 16px 84px; font-size: 12px; }
+  .workspace .topbar { height: 60px; padding-inline: 14px; }
+  .workspace .sidebar { padding: 18px 12px 16px; }
+  .workspace .sidebar-footer { padding-bottom: 12px; }
+  .workspace .privacy-card p br,
+  .workspace .jippi-tip p br { display: none; }
+  .workspace .page-heading h1 { font-size: 22px; }
+  .workspace .dashboard-hero,
+  .workspace .welcome-banner { border-left-width: 3px; }
+  .workspace .dashboard-hero-copy { padding: 22px 18px; }
+  .workspace .stat-item { padding: 16px 18px; }
+  .workspace .stat-value { font-size: 26px; }
+  .workspace .button { font-size: 13.5px; }
+  .workspace .section-title { padding: 18px 16px 12px; }
+  .workspace .tag { font-size: 12px; }
+}
+@media (max-width: 560px) {
+  /* Keep the shell chrome from pushing the page wider than the viewport. */
+  .workspace .topbar { gap: 10px; }
+  .workspace .topbar-location { min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+  .workspace .breadcrumb-root { display: none; }
+  .workspace .topbar-location > svg { display: none; }
+  .workspace .topbar-actions { gap: 8px; min-width: 0; }
+  .workspace .topbar-search { padding: 6px 8px; }
+}
+@media (max-width: 400px) {
+  .workspace .app-main { padding-inline: 13px; }
+  .workspace .workspace-footnote { padding-inline: 13px; }
+  .workspace .topbar-search > span { display: none; }
+  .workspace .topbar-search kbd { margin-left: 6px; }
+}
+
+/* ---------------------------------------------------------------------------
+   12. Reduced motion — the refresh adds no motion of its own
+   ------------------------------------------------------------------------ */
+@media (prefers-reduced-motion: reduce) {
+  .workspace *,
+  .workspace *::before,
+  .workspace *::after,
+  .modal *,
+  .modal *::before,
+  .modal *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

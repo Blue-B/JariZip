@@ -42,15 +42,15 @@ test('default aggregate search exposes nationwide and occupation filters and pre
   await page.getByRole('combobox', { name: '직무 분야' }).selectOption('development');
   await page.getByRole('combobox', { name: '지원 경력' }).selectOption('1');
   await page.getByRole('textbox', { name: '실제 공고 검색어' }).fill('Python');
+  const next = page.waitForRequest(request => request.url().includes('/api/jobs?') && request.url().includes('q=Python') && request.url().includes('page=1'));
   const submitted = page.waitForRequest(request => request.url().includes('/api/jobs?') && request.url().includes('q=Python'));
   await page.getByRole('button', { name: '공고 찾기', exact: true }).click();
   const query = new URL((await submitted).url()).searchParams;
   expect(Object.fromEntries(query)).toMatchObject({ source: 'all', location: 'busan', category: 'development', experience: '1', page: '0' });
   await expect(page.locator('.discover-active-filters')).toContainText('부산');
-  const next = page.waitForRequest(request => request.url().includes('/api/jobs?') && request.url().includes('page=1'));
-  await page.getByRole('button', { name: '공고 더 보기', exact: true }).click();
+  // The display page automatically refills from smaller source batches.
   expect(Object.fromEntries(new URL((await next).url()).searchParams)).toMatchObject({ location: 'busan', category: 'development', experience: '1' });
-  await expect(page.getByRole('button', { name: '공고 더 보기', exact: true })).toBeDisabled();
+  await expect(page.getByRole('button', { name: '다음 페이지', exact: true })).toBeDisabled();
   await page.getByRole('button', { name: '조건 초기화', exact: true }).click();
   await expect(page.getByRole('combobox', { name: '공고 근무 지역' })).toHaveValue('all');
   await expect(page.locator('.discover-active-filters')).toHaveCount(0);
@@ -60,8 +60,9 @@ test('a failed source is visible without hiding successful source results', asyn
   await mockSources(page, true);
   await page.goto('/#/app/discover');
   await expect(page.locator('.discover-job')).toHaveCount(2);
-  await expect(page.locator('.discover-source-result.is-error')).toContainText('점핏');
-  await expect(page.locator('.discover-source-result.is-error')).toContainText('시험용 조회 제한');
+  await page.locator('.discover-source-warning summary').click();
+  await expect(page.locator('.discover-source-warning')).toContainText('점핏');
+  await expect(page.locator('.discover-source-warning')).toContainText('시험용 조회 제한');
   await expect(page.locator('.discover-error')).toHaveCount(0);
 });
 

@@ -74,6 +74,7 @@ try {
   await page.evaluate(() => document.fonts.ready);
   await page.screenshot({ path: '.local/live-check/live-jobs-desktop.png', fullPage: false });
   await page.setViewportSize({ width: 390, height: 844 });
+  await page.waitForFunction(() => document.documentElement.scrollWidth <= innerWidth + 1, null, { timeout: 5000 });
   assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1));
   await page.screenshot({ path: '.local/live-check/live-jobs-mobile.png', fullPage: false });
   await page.setViewportSize({ width: 1440, height: 1000 }); await page.goto(`${base}/#/`);

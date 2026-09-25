@@ -31,7 +31,7 @@ test('source-backed preparation persists and later source edits do not change su
   });
   await page.goto('/#/app/discover');
   await expect(page.locator('.discover-job')).toHaveCount(1);
-  await expect(page.locator('.discover-job')).toContainText('게시일 미공개');
+  await expect(page.locator('.discover-job')).toContainText('마감일 미공개');
   await page.locator('.discover-job').click();
   await expect(page.getByRole('dialog')).toContainText(raw.detail.intro);
   await page.getByRole('button', { name: '지원 준비하기', exact: true }).click();

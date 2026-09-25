@@ -55,7 +55,7 @@ export function normalizeWanted(value, checkedAt) {
     verification: 'source', verifiedAt: checkedAt, source: '원티드', sourceUrl: `https://www.wanted.co.kr/wd/${raw.id}`,
     description: [text(detail.intro), text(detail.main_tasks)].filter(Boolean).join('\n\n'),
     requirements: [text(detail.requirements), detail.preferred_points ? `우대사항\n${text(detail.preferred_points)}` : ''].filter(Boolean).join('\n\n'),
-    benefits: text(detail.benefits), companyInfo: '', saved: false, isDemo: false, color: 'ink',
+    benefits: text(detail.benefits), companyInfo: [text(company.industry_name, 200) ? `업종: ${text(company.industry_name, 200)}` : '', ...list(raw.company_tags).map(tag => text(object(tag).title, 80)).filter(tag => /^(?:[0-9,]+(?:[~～-][0-9,]+)?명(?:\s*이[상하])?|설립[0-9~～-]+년)$/.test(tag)).map(tag => `원티드 등록 정보: ${tag}`)].filter(Boolean).join('\n'), saved: false, isDemo: false, color: 'ink',
   };
 }
 
@@ -95,7 +95,7 @@ export function normalizeJumpit(value, checkedAt) {
     verification: 'source', verifiedAt: checkedAt, source: '점핏', sourceUrl: `https://jumpit.saramin.co.kr/position/${raw.id}`,
     description: text([plain(raw.serviceInfo), plain(raw.responsibility)].filter(Boolean).join('\n\n')),
     requirements: text([plain(raw.qualifications), raw.preferredRequirements ? `우대사항\n${plain(raw.preferredRequirements)}` : ''].filter(Boolean).join('\n\n')),
-    benefits: plain(raw.welfares), companyInfo: '', saved: false, isDemo: false, color: 'ink',
+    benefits: plain(raw.welfares), companyInfo: text(raw.companyUrl, 500) ? `출처에 등록된 홈페이지: ${text(raw.companyUrl, 500)}` : '', saved: false, isDemo: false, color: 'ink',
   };
 }
 

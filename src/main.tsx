@@ -1,9 +1,9 @@
 import React, { Suspense, lazy } from 'react';
 import ReactDOM from 'react-dom/client';
 import { HashRouter, Routes, Route, Link } from 'react-router-dom';
-import '@fontsource-variable/noto-sans-kr';
-import '@fontsource-variable/manrope';
+import 'pretendard/dist/web/variable/pretendardvariable-dynamic-subset.css';
 import './styles/global.css';
+import './styles/typography.css';
 
 const Landing = lazy(() => import('./pages/Landing'));
 const Workspace = lazy(() => import('./pages/Workspace'));

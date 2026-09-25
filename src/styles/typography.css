@@ -1,0 +1,4 @@
+/* Locally bundled, subset variable font. Never contact an external font CDN. */
+:root { --font: 'Pretendard Variable', Pretendard, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
+body, button, input, textarea, select { font-family: var(--font); }
+body { text-rendering: optimizeLegibility; -webkit-font-smoothing: antialiased; }

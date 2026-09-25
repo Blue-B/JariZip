@@ -12,7 +12,8 @@ export default defineConfig(({ mode }) => ({
     },
   }],
   base: './',
-  build: { target: 'es2022', chunkSizeWarningLimit: 1100 },
+  // Keep even small font subsets on the same origin; CSP intentionally excludes data: fonts.
+  build: { target: 'es2022', chunkSizeWarningLimit: 1100, assetsInlineLimit: 0 },
   server: { host: '127.0.0.1', port: 5173 },
   test: { include: ['src/**/*.test.ts'], environment: 'node' },
 }));
