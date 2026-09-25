@@ -1,0 +1,19 @@
+.source-connections { min-width: 0; }
+.connection-intro, .connection-copy p { color: #536176; font-size: 14px; line-height: 1.75; }
+.connection-intro { margin: 0 0 20px; }
+.connection-list { list-style: none; padding: 0; margin: 0; border-top: 1px solid #e1e6ed; }
+.connection-row { display: flex; align-items: center; justify-content: space-between; gap: 20px; padding: 20px 0; border-bottom: 1px solid #e1e6ed; }
+.connection-copy { min-width: 0; }
+.connection-copy h3 { margin: 0 0 5px; color: #17253a; font-size: 16px; }
+.connection-copy p { margin: 3px 0; overflow-wrap: anywhere; }
+.connection-copy .connection-meta { font-size: 13px; color: #66758a; }
+.connection-copy .result-ready { color: #216446; }
+.connection-copy .result-error, .connection-error { color: #9c382d; }
+.connection-row > button { flex: 0 0 auto; min-height: 42px; }
+.connection-link { display: inline-flex; align-items: center; gap: 6px; margin-top: 18px; min-height: 40px; color: #2348e8; font-size: 14px; font-weight: 650; text-decoration: none; }
+.connection-link:hover { text-decoration: underline; text-underline-offset: 4px; }
+.connection-error p { overflow-wrap: anywhere; }
+@media (max-width: 760px) {
+  .connection-row { align-items: flex-start; flex-direction: column; gap: 12px; }
+  .connection-row > button { align-self: flex-start; }
+}

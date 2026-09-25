@@ -7,7 +7,7 @@
      - Deep navy Korean type, ONE vivid cobalt accent (#2348e8), no second hue.
      - Small radii (3px / 6px / 10px). No pastel card field, no badge stickers,
        no English overlines, no decorative float/pulse animation.
-     - The local Jippi AVIF is the single character anchor.
+     - Jippi is the single character anchor.
    Shape rule, applied everywhere:
      buttons + pills -> 999px
      panels + wells  -> 6px / 10px
@@ -119,7 +119,7 @@
   transition: background-color 0.16s ease, color 0.16s ease;
 }
 .lz-nav-link:hover { background: #f1eee6; color: var(--lz-ink); }
-.lz-nav-actions { display: flex; align-items: center; gap: 10px; }
+.lz-nav-actions { display: flex; align-items: center; gap: 10px; margin-inline-start: auto; }
 .lz-burger { display: none; align-items: center; justify-content: center; width: 42px; height: 42px; border: 1px solid var(--lz-line); border-radius: var(--lz-r-well); background: #fff; color: var(--lz-ink); }
 .lz-nav-panel { display: flex; flex-direction: column; gap: 4px; padding: 12px clamp(20px, 4.4vw, 48px) 20px; background: var(--lz-panel); border-bottom: 1px solid var(--lz-line); }
 .lz-nav-panel .lz-nav-link { text-align: left; padding: 12px 4px; font-size: 0.94rem; }

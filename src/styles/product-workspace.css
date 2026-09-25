@@ -1,7 +1,8 @@
 /* Preserve the existing, verified page layouts; apply one restrained product theme. */
 @import './product-workspace-base.css';
 
-.workspace {
+.workspace,
+.modal {
   --pw-ink: #101a30;
   --pw-strong: #24324e;
   --pw-body: #4b5a76;
@@ -18,8 +19,8 @@
   --pw-shadow: 0 1px 2px rgba(16, 26, 48, .04);
   --pw-shadow-soft: none;
   --brand: #2348e8;
-  background: var(--pw-canvas);
 }
+.workspace { background: var(--pw-canvas); }
 .workspace .app-main { font-size: 14px; }
 .workspace .eyebrow { display: none; }
 .workspace .nav-caption { letter-spacing: 0; font-size: 12px; color: var(--pw-muted); }

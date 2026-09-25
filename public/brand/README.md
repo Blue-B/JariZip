@@ -1,10 +1,10 @@
-# Jippi artwork
+# 지피 · Jippi
 
-Jippi is JariZip's zipper-pouch character. These optimized AVIF assets are used throughout the landing page and career workspace; the surrounding interface remains fully interactive.
+지피는 자리집의 지퍼 파우치 모양 브랜드 캐릭터입니다.
 
-- `jippi-wave.avif`: 418 × 420, 11,774 bytes.
-- `jippi-document.avif`: 397 × 420, 11,005 bytes.
+- `jippi-wave.avif`: 인사하는 모습, 418 × 420.
+- `jippi-document.avif`: 서류를 든 모습, 397 × 420.
 
-The app serves both files from its own origin. No image CDN, expiring URL, remote font or tracking request is required. Marketing mockups containing fabricated user counts, reviews, dates, names or app-store badges are deliberately not used in the product.
+이미지는 앱과 함께 제공하며 외부 이미지 서버에 요청하지 않습니다. 화면 크기에 맞춰 표시하고 원래 비율을 유지하세요.
 
-Artwork is distributed with this repository under its MIT license. The original working SVG mascot remains available in `src/components/Mascot.tsx`.
+코드에 포함된 캐릭터 자료에는 저장소의 MIT 라이선스가 적용됩니다. 다른 의존성의 라이선스와 상표 권리는 각각의 권리자를 따릅니다.

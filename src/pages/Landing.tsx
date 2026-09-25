@@ -4,7 +4,7 @@
  * Design read: Korean job-seeker workspace that now searches real Wanted
  * postings. Editorial layout on warm white paper: hairline rules, deep navy
  * Korean type, ONE cobalt accent, small radii, no pastel card field, no English
- * overlines, no badge/sticker repetition. The local Jippi AVIF stays
+ * overlines, no badge/sticker repetition. The Jippi brand artwork stays
  * as the single character anchor.
  *
  * Honesty rules: no fictional company, document, count or search result appears

@@ -14,7 +14,7 @@ const style: CSSProperties = {
   userSelect: 'none', pointerEvents: 'none',
 };
 
-/** JariZip character artwork served locally; no external image requests. */
+/** Jippi brand artwork, served with the app without external image requests. */
 export default function JippiArt({ pose = 'wave', className = '', alt = '', priority = false }: JippiArtProps) {
   return <img
     className={`jippi-art ${className}`}

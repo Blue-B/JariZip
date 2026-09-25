@@ -45,6 +45,12 @@ try {
   await page.screenshot({ path: '.local/live-check/live-jobs-mobile.png', fullPage: false });
   await page.setViewportSize({ width: 1440, height: 1000 }); await page.goto(`${base}/#/`);
   await page.evaluate(() => document.fonts.ready); await page.screenshot({ path: '.local/live-check/landing.png' });
+  await page.goto(`${base}/#/app/settings`);
+  const probe = page.getByRole('button', { name: '원티드 공고 조회 확인', exact: true });
+  await probe.waitFor();
+  await probe.click();
+  await page.locator('.connection-result.result-ready').waitFor({ timeout: 25000 });
+  await page.locator('.source-connections').screenshot({ path: '.local/live-check/source-connections.png' });
   assert.deepEqual(errors, []);
-  console.log(JSON.stringify({ checkedAt: new Date().toISOString(), source: 'wanted', liveResults: result.jobs.length, verified: ['real search', 'source detail', 'browser save', 'application snapshot', 'reload', 'mobile layout'], screenshots: '.local/live-check/' }, null, 2));
+  console.log(JSON.stringify({ checkedAt: new Date().toISOString(), source: 'wanted', liveResults: result.jobs.length, verified: ['real search', 'source detail', 'browser save', 'application snapshot', 'reload', 'mobile layout', 'settings source check'], screenshots: '.local/live-check/' }, null, 2));
 } finally { await browser?.close(); server.closeAllConnections(); await new Promise(resolve => server.close(resolve)); }
