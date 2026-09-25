@@ -1,5 +1,12 @@
 import { defineConfig } from '@playwright/test';
 
+// An isolated checkout must not accidentally test another checkout's preview.
+const port = Number(process.env.JARIZIP_TEST_PORT ?? 4178);
+if (!Number.isInteger(port) || port < 1024 || port > 65535) {
+  throw new Error('JARIZIP_TEST_PORT must be an integer from 1024 to 65535.');
+}
+const baseURL = `http://127.0.0.1:${port}`;
+
 export default defineConfig({
   testDir: './tests/e2e',
   fullyParallel: false,
@@ -9,7 +16,7 @@ export default defineConfig({
   retries: 0,
   reporter: [['list'], ['html', { open: 'never' }]],
   use: {
-    baseURL: 'http://127.0.0.1:4178',
+    baseURL,
     viewport: { width: 1440, height: 1000 },
     locale: 'ko-KR',
     timezoneId: 'Asia/Seoul',
@@ -23,8 +30,8 @@ export default defineConfig({
     },
   },
   webServer: {
-    command: 'npm run preview',
-    url: 'http://127.0.0.1:4178',
+    command: `npm run preview -- --port ${port}`,
+    url: baseURL,
     reuseExistingServer: !process.env.CI,
     timeout: 20000,
   },

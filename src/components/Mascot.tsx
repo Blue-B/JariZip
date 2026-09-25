@@ -25,6 +25,8 @@ export interface MascotProps {
   compact?: boolean;
   /** Disable the click reaction (eye tracking stays on) for decorative use. */
   interactive?: boolean;
+  /** Pause motion without disabling keyboard or click reactions. */
+  paused?: boolean;
 }
 
 /** Zipper teeth, laid along the pouch crown. */
@@ -73,11 +75,12 @@ const CSS = `
 }
 `;
 
-export default function Mascot({ className, compact = false, interactive = true }: MascotProps) {
+export default function Mascot({ className, compact = false, interactive = true, paused = false }: MascotProps) {
   const instanceId = useId();
   const bodyId = `${instanceId}-body`;
   const clipId = `${instanceId}-clip`;
-  const reduce = useReducedMotion();
+  const systemReduce = useReducedMotion();
+  const reduce = Boolean(systemReduce || paused);
   const rootRef = useRef<HTMLSpanElement>(null);
   const reactTimer = useRef<number | null>(null);
   const lineTimer = useRef<number | null>(null);
@@ -176,7 +179,7 @@ export default function Mascot({ className, compact = false, interactive = true 
         <motion.g
           style={{ transformBox: 'fill-box', transformOrigin: 'center bottom' }}
           animate={reduce ? undefined : { y: reacting ? 5 : 0, scaleY: reacting ? 0.968 : 1 }}
-          transition={{ type: 'spring', stiffness: 340, damping: 17 }}
+          transition={reduce ? { duration: 0 } : { type: 'spring', stiffness: 340, damping: 17 }}
         >
           {/* paper-strip arms + folded feet */}
           {!compact && (
@@ -216,12 +219,12 @@ export default function Mascot({ className, compact = false, interactive = true 
             fill="var(--ink,#17202a)"
             style={{ transformBox: 'fill-box', transformOrigin: 'center top' }}
             animate={reacting ? { opacity: 1, scaleY: 1 } : { opacity: 0, scaleY: 0.25 }}
-            transition={{ type: 'spring', stiffness: 320, damping: 22 }}
+            transition={reduce ? { duration: 0 } : { type: 'spring', stiffness: 320, damping: 22 }}
           />
           <motion.g
             style={{ transformBox: 'fill-box', transformOrigin: 'center bottom' }}
             animate={reacting ? { scaleY: 1, opacity: 1 } : { scaleY: 0.05, opacity: 0 }}
-            transition={{ type: 'spring', stiffness: 300, damping: 20, delay: reacting ? 0.06 : 0 }}
+            transition={reduce ? { duration: 0 } : { type: 'spring', stiffness: 300, damping: 20, delay: reacting ? 0.06 : 0 }}
           >
             <rect x="105" y="42" width="30" height="44" rx="11" fill="#fffdf7" stroke="var(--ink,#17202a)" strokeWidth="2.5" />
             <path d="M114 62h12M114 70h8" stroke="var(--ink,#17202a)" strokeOpacity="0.35" strokeWidth="2.5" strokeLinecap="round" />
@@ -234,7 +237,7 @@ export default function Mascot({ className, compact = false, interactive = true 
               <rect key={x} x={x} y="73" width="5" height="7" rx="2" />
             ))}
           </g>
-          <motion.g animate={{ x: zipOffset ?? (reacting ? 26 : 0) }} transition={{ type: 'spring', stiffness: 260, damping: 19 }}>
+          <motion.g animate={{ x: zipOffset ?? (reacting ? 26 : 0) }} transition={reduce ? { duration: 0 } : { type: 'spring', stiffness: 260, damping: 19 }}>
             <rect x="176" y="67" width="19" height="19" rx="5" fill="#fffdf7" stroke="var(--ink,#17202a)" strokeWidth="2.5" />
             <path d="M185 86v10" stroke="var(--ink,#17202a)" strokeWidth="2.5" strokeLinecap="round" />
             <rect x="179" y="95" width="13" height="20" rx="6" fill="#c8f04a" stroke="var(--ink,#17202a)" strokeWidth="2.5" />
@@ -244,7 +247,7 @@ export default function Mascot({ className, compact = false, interactive = true 
           <rect x="60" y="98" width="120" height="64" rx="19" fill="#fffdf7" stroke="var(--ink,#17202a)" strokeOpacity="0.12" strokeWidth="2" />
 
           {/* eyes: tracking group > blink group */}
-          <motion.g style={{ x: eyeX, y: eyeY }}>
+          <motion.g style={{ x: reduce ? 0 : eyeX, y: reduce ? 0 : eyeY }}>
             <g className={reduce ? undefined : 'lz-mascot-eyes'}>
               <ellipse cx="98" cy="127" rx="7.6" ry="8.6" fill="var(--ink,#17202a)" />
               <ellipse cx="142" cy="127" rx="7.6" ry="8.6" fill="var(--ink,#17202a)" />
@@ -267,7 +270,7 @@ export default function Mascot({ className, compact = false, interactive = true 
             strokeWidth="3"
             strokeLinecap="round"
             animate={reduce ? undefined : { d: reacting ? 'M110 143q10 13 20 0' : 'M112 145q8 8 16 0' }}
-            transition={{ type: 'spring', stiffness: 300, damping: 20 }}
+            transition={reduce ? { duration: 0 } : { type: 'spring', stiffness: 300, damping: 20 }}
           />
 
           {/* lime highlighter sticker */}
@@ -306,7 +309,7 @@ export default function Mascot({ className, compact = false, interactive = true 
             initial={reduce ? { opacity: 0 } : { opacity: 0, y: 8, scale: 0.95 }}
             animate={reduce ? { opacity: 1 } : { opacity: 1, y: 0, scale: 1 }}
             exit={reduce ? { opacity: 0 } : { opacity: 0, y: 5, scale: 0.98 }}
-            transition={{ duration: reduce ? 0.12 : 0.24, ease: [0.16, 1, 0.3, 1] }}
+            transition={{ duration: reduce ? 0 : 0.24, ease: [0.16, 1, 0.3, 1] }}
           >
             {REACTIONS[line]}
           </motion.span>

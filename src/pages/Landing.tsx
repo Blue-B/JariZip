@@ -55,6 +55,8 @@ import {
   Target,
   TriangleAlert,
   Upload,
+  Pause,
+  Play,
   WifiOff,
   X,
 } from 'lucide-react';
@@ -512,7 +514,9 @@ function Nav({ onNavigate }: { onNavigate: (id: string) => void }) {
 /* --------------------------------------------------------------------- hero */
 
 function Hero() {
-  const reduce = useReducedMotion();
+  const systemReduce = useReducedMotion();
+  const [motionPaused, setMotionPaused] = useState(false);
+  const reduce = Boolean(systemReduce || motionPaused);
   const heroRef = useRef<HTMLElement>(null);
   const { scrollYProgress } = useScroll({ target: heroRef, offset: ['start start', 'end start'] });
   const drift = useSpring(useTransform(scrollYProgress, [0, 1], [0, -46]), { stiffness: 90, damping: 22 });
@@ -572,6 +576,7 @@ function Hero() {
           </motion.div>
         </div>
 
+        <div className="lz-hero-visual">
         <div className="lz-hero-stage">
           <motion.div
             className="lz-hero-blob"
@@ -588,7 +593,7 @@ function Hero() {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             transition={{ duration: 0.75, delay: 0.1, ease: EASE }}
           >
-            <Mascot />
+            <Mascot paused={motionPaused} />
           </motion.div>
 
           <motion.span
@@ -608,8 +613,8 @@ function Hero() {
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.6, delay: 0.52, ease: EASE }}
           >
-            <WifiOff size={15} strokeWidth={2.2} aria-hidden="true" />
-            오프라인에서도 열림
+            <HardDrive size={15} strokeWidth={2.2} aria-hidden="true" />
+            파일은 내 브라우저에
           </motion.span>
           <motion.span
             className="lz-float-card lz-float-card-c"
@@ -621,6 +626,16 @@ function Hero() {
             <Lock size={15} strokeWidth={2.2} aria-hidden="true" />
             계정 없음 · 전송 없음
           </motion.span>
+        </div>
+        <div className="lz-mascot-controls">
+          <span>지피를 눌러 인사해 봐요</span>
+          {systemReduce ? <span className="lz-motion-note">기기의 움직임 최소화 설정 적용 중</span> : (
+            <button type="button" className="lz-motion-toggle" aria-pressed={motionPaused} onClick={() => setMotionPaused(value => !value)}>
+              {motionPaused ? <Play size={13} aria-hidden="true" /> : <Pause size={13} aria-hidden="true" />}
+              {motionPaused ? '캐릭터 움직임 켜기' : '캐릭터 움직임 멈추기'}
+            </button>
+          )}
+        </div>
         </div>
       </div>
     </section>
@@ -1645,12 +1660,12 @@ function FinalCta({ onTop }: { onTop: () => void }) {
                   </Link>
                 </li>
                 <li>
-                  <Link className="lz-footer-link" to="/app">
+                  <Link className="lz-footer-link" to="/app/documents">
                     서류 보관함
                   </Link>
                 </li>
                 <li>
-                  <Link className="lz-footer-link" to="/app">
+                  <Link className="lz-footer-link" to="/app/applications">
                     지원 보드
                   </Link>
                 </li>
@@ -1661,19 +1676,19 @@ function FinalCta({ onTop }: { onTop: () => void }) {
               <p className="lz-footer-col-title">이 페이지</p>
               <ul className="lz-footer-links">
                 <li>
-                  <a className="lz-footer-link" href="#flow">
+                  <button type="button" className="lz-footer-link" onClick={() => document.getElementById('flow')?.scrollIntoView({ behavior: prefersReduced() ? 'auto' : 'smooth' })}>
                     이용 흐름
-                  </a>
+                  </button>
                 </li>
                 <li>
-                  <a className="lz-footer-link" href="#limits">
+                  <button type="button" className="lz-footer-link" onClick={() => document.getElementById('limits')?.scrollIntoView({ behavior: prefersReduced() ? 'auto' : 'smooth' })}>
                     한계와 원칙
-                  </a>
+                  </button>
                 </li>
                 <li>
-                  <a className="lz-footer-link" href="#faq">
+                  <button type="button" className="lz-footer-link" onClick={() => document.getElementById('faq')?.scrollIntoView({ behavior: prefersReduced() ? 'auto' : 'smooth' })}>
                     자주 묻는 질문
-                  </a>
+                  </button>
                 </li>
                 <li>
                   <button type="button" className="lz-footer-link" onClick={onTop}>
@@ -1750,12 +1765,12 @@ export default function Landing() {
 
   return (
     <div className="lz-landing" lang="ko">
-      <a className="lz-skip" href="#lz-main">
+      <a className="lz-skip" href="#lz-main" onClick={event => { event.preventDefault(); document.getElementById('lz-main')?.focus(); }}>
         본문으로 건너뛰기
       </a>
       <Nav onNavigate={scrollTo} />
       <SideRail active={active} />
-      <main id="lz-main">
+      <main id="lz-main" tabIndex={-1}>
         <Hero />
         <Facts />
         <Features />
