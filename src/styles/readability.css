@@ -751,6 +751,9 @@
 .workspace .view-switch>button.active { color: #1f3fa0; }
 .workspace .saved-filter { color: var(--rz-muted); }
 .workspace .saved-filter.selected { color: #1f3fa0; }
+/* .saved-filter>span is (0,2,0) in the parent sheet, so it needs its own rule. */
+.workspace .saved-filter > span { color: var(--rz-muted); font-size: 11px; }
+.workspace .saved-filter.selected > span { color: #1f3fa0; }
 /* Remaining single-element meta fixes found by the live contrast audit. */
 .workspace .job-detail-status>span:last-child:not(.tag) { color: var(--rz-muted); }
 .workspace .question-stage-top .eyebrow .muted { color: var(--rz-muted); }
@@ -766,6 +769,11 @@
 .workspace .editor-help code { color: #33528f; background: #eef2fa; }
 .workspace .backup-summary>span, .workspace .reset-section>p { color: var(--rz-muted); }
 .workspace .settings-section>.field-hint, .workspace .settings-section>.note { color: var(--rz-muted); }
+/* These two out-specify the generic .field-hint rule (two classes vs one),
+   so they need their own colour declaration. */
+.workspace .settings-section .stack-form .field-hint { color: var(--rz-muted); font-size: 11.5px; }
+.workspace .settings-section .stack-form label { color: var(--rz-strong); }
+.workspace .settings-section .stack-form .goal-field>div { color: var(--rz-muted); }
 .workspace .enabled-feature { color: #1f6b45; }
 .workspace .privacy-seal { color: #3d5340; }
 .workspace .integration-explanation p, .workspace .integration-explanation h3 { color: var(--rz-body); }
@@ -932,7 +940,12 @@
 .modal .eyebrow { font-size: 10.5px; }
 .modal .field-hint { font-size: 11.5px; color: var(--rz-muted); }
 .modal .button { font-size: 13px; }
-.modal .tag { font-size: 11px; }
+.modal .tag { font-size: 11px; color: var(--rz-muted); }
+.modal .tag--blue { color: #1f3fa0; }
+.modal .tag--green { color: #1f6b45; }
+.modal .tag--orange { color: #8a5a12; }
+.modal .tag--violet { color: #5f4489; }
+.modal kbd { font-size: 11px; color: var(--rz-muted); }
 .modal .command-results button { font-size: 13px; }
 .modal .command-results button>svg { color: var(--rz-muted); }
 .modal .notification-item strong { font-size: 14px; color: var(--rz-strong); }
@@ -942,9 +955,11 @@
 .modal .confirm-description { color: var(--rz-body); }
 .modal .document-picker span:not(.tag):not(.document-icon) { font-size: 11.5px; color: var(--rz-muted); }
 .modal .document-picker strong { font-size: 12.5px; color: var(--rz-strong); }
-.modal .editor-help { font-size: 11.5px; color: var(--rz-muted); }
-.modal .editor-toolbar { font-size: 11.5px; color: var(--rz-muted); }
-.modal .editor-toolbar small { font-size: 11px; }
+.modal .editor-help { font-size: 12px; color: var(--rz-muted); }
+.modal .editor-help code { color: #33528f; background: #eef2fa; }
+.modal .editor-toolbar { font-size: 12px; color: var(--rz-muted); }
+.modal .editor-toolbar small { font-size: 11.5px; color: var(--rz-muted); }
+.modal .editor-toolbar code { color: #33528f; background: #eef2fa; }
 .modal .form-error { font-size: 12.5px; }
 .modal .preview-caption { color: var(--rz-muted); }
 .modal .paper-content { color: #3b4a63; }
