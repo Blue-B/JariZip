@@ -127,11 +127,14 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   const writingRef = useRef(false);
   const queuedRef = useRef(false);
   const errorNotifiedRef = useRef(false);
+  const pendingSaveRef = useRef(false);
+  const revisionRef = useRef(0);
+  const pendingToastRef = useRef('');
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   /* ----------------------------- notify ----------------------------- */
 
-  const notify = useCallback((message: string) => {
+  const showToast = useCallback((message: string) => {
     const text = typeof message === 'string' ? message : String(message ?? '');
     if (!text) return;
     setToast(text);
@@ -150,11 +153,34 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     [],
   );
 
+  // Mutation confirmations are shown only after the IndexedDB transaction commits.
+  const notify = useCallback((message: string) => {
+    if (pendingSaveRef.current) {
+      pendingToastRef.current = message;
+      return;
+    }
+    showToast(message);
+  }, [showToast]);
+
+  useEffect(() => {
+    const beforeUnload = (event: BeforeUnloadEvent) => {
+      if (!pendingSaveRef.current && !writingRef.current) return;
+      event.preventDefault();
+      event.returnValue = '';
+    };
+    window.addEventListener('beforeunload', beforeUnload);
+    return () => window.removeEventListener('beforeunload', beforeUnload);
+  }, []);
+
   /* ----------------------------- saving ----------------------------- */
 
   const flush = useCallback(async () => {
     if (unavailableRef.current) {
+      const attemptedSave = pendingSaveRef.current;
+      pendingSaveRef.current = false;
+      pendingToastRef.current = '';
       setStorageStatus('temporary');
+      if (attemptedSave) showToast('현재 화면에만 반영됐어요. 저장소를 사용할 수 없어 새로고침하면 사라질 수 있으니 백업해주세요.');
       return;
     }
     if (writingRef.current) {
@@ -166,10 +192,12 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     writingRef.current = true;
     setStorageStatus('saving');
     let failure: { quota: boolean; message: string } | null = null;
+    let savedRevision = revisionRef.current;
     try {
       do {
         queuedRef.current = false;
         const snapshot = stateRef.current;
+        savedRevision = revisionRef.current;
         // idb-keyval resolves this promise on the IndexedDB transaction's
         // `complete` event and rejects on `abort`/`error` (including
         // QuotaExceededError). That commit acknowledgement is the save proof —
@@ -184,17 +212,22 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     }
 
     if (failure) {
+      pendingSaveRef.current = false;
+      pendingToastRef.current = '';
       setStorageStatus('error');
-      // Notify once per failure streak so rapid typing cannot spam toasts.
       if (!errorNotifiedRef.current) {
         errorNotifiedRef.current = true;
-        notify(failure.message);
+        showToast(failure.message);
       }
-    } else {
+    } else if (savedRevision === revisionRef.current) {
       errorNotifiedRef.current = false;
+      pendingSaveRef.current = false;
       setStorageStatus('saved');
+      const confirmation = pendingToastRef.current;
+      pendingToastRef.current = '';
+      if (confirmation) showToast(confirmation);
     }
-  }, [notify]);
+  }, [showToast]);
 
   /* --------------------------- hydration --------------------------- */
 
@@ -267,23 +300,22 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   /* ----------------------------- update ----------------------------- */
 
   const update = useCallback((fn: (s: WorkspaceState) => WorkspaceState) => {
-    // An explicit user change releases the corrupt-recovery write block.
+    const base = stateRef.current;
+    if (!base) return;
+    let next: WorkspaceState;
+    try {
+      next = fn(base);
+    } catch (error) {
+      console.error('워크스페이스 업데이트 실패', error);
+      return;
+    }
+    if (!next || typeof next !== 'object' || next === base) return;
     autoFlushBlockedRef.current = false;
-    setState((previous) => {
-      const base = previous ?? stateRef.current;
-      if (!base) return previous;
-      let next: WorkspaceState;
-      try {
-        next = fn(base);
-      } catch (error) {
-        // A broken reducer must never corrupt the workspace.
-        console.error('워크스페이스 업데이트 실패', error);
-        return previous;
-      }
-      if (!next || typeof next !== 'object') return previous;
-      stateRef.current = next;
-      return next;
-    });
+    stateRef.current = next;
+    revisionRef.current += 1;
+    pendingSaveRef.current = true;
+    setStorageStatus(unavailableRef.current ? 'temporary' : 'saving');
+    setState(next);
   }, []);
 
   const value = useMemo<WorkspaceContextValue>(

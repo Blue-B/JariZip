@@ -29,7 +29,15 @@ export default function Documents() {
   const [deleteGroup, setDeleteGroup] = useState<DocumentRecord | null>(null);
   const [uploadKind, setUploadKind] = useState<DocumentKind>('이력서');
   const fileRef = useRef<HTMLInputElement>(null);
-  useEffect(() => { const doc = params.get('doc'); if (doc) setViewId(doc); }, [params]);
+  useEffect(() => {
+    const doc = params.get('doc');
+    if (doc) setViewId(doc);
+    if (params.get('new') === '1') {
+      setViewId('');
+      setEditor('new');
+      setParams(current => { current.delete('new'); return current; }, { replace: true });
+    }
+  }, [params, setParams]);
   const latest = latestDocuments(state.documents);
   const docs = useMemo(() => latest.filter(d => (kind === '전체' || d.kind === kind) && `${d.title} ${d.text}`.toLowerCase().includes(query.toLowerCase())).sort((a, b) => b.createdAt.localeCompare(a.createdAt)), [latest, kind, query]);
   const viewing = state.documents.find(d => d.id === viewId);
