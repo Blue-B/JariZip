@@ -9,11 +9,13 @@
   "scripts": {
     "dev": "vite --host 127.0.0.1",
     "build": "tsc --noEmit && vite build",
-    "preview": "vite preview --host 127.0.0.1 --port 4178 --strictPort",
+    "preview": "node server/index.mjs",
+    "start": "node server/index.mjs",
     "preview:start": "node scripts/preview.mjs start",
     "preview:stop": "node scripts/preview.mjs stop",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run",
+    "test": "vitest run && node --test server/*.test.mjs",
+    "test:live": "node scripts/check-live-jobs.mjs",
     "test:e2e": "playwright test",
     "check": "npm run typecheck && npm test && npm run build"
   },

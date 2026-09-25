@@ -1,0 +1,71 @@
+.discover-page { max-width: 1120px; margin: 0 auto; }
+.discover-heading { display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; margin: 4px 0 28px; }
+.discover-heading h1 { font-size: 30px; letter-spacing: -1px; line-height: 1.35; color: #1b2740; }
+.discover-heading p { margin-top: 10px; color: #64718a; line-height: 1.8; font-size: 14px; }
+.discover-search { display: flex; align-items: stretch; gap: 9px; padding: 12px; border: 1px solid #dfe4ee; border-radius: 12px; background: #fff; }
+.discover-query { display: flex; align-items: center; gap: 10px; flex: 1; min-width: 160px; color: #66748c; padding-left: 8px; }
+.discover-query input { border: 0; box-shadow: none; background: transparent; min-width: 0; }
+.discover-search > label:not(.discover-query) { min-width: 110px; }
+.discover-search select { height: 100%; background: #fff; }
+.discover-privacy { margin: 12px 2px 22px; font-size: 12px; line-height: 1.8; color: #69758a; }
+.discover-results-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; border-bottom: 1px solid #dfe4ee; padding-bottom: 10px; color: #34425b; font-size: 13px; }
+.discover-source-time { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 14px; margin: 14px 0 8px; color: #66738b; font-size: 11px; line-height: 1.8; }
+.discover-source-time > span:last-child { margin-left: auto; }
+.discover-list { border-bottom: 1px solid #dfe4ee; }
+.discover-job { width: 100%; display: flex; align-items: center; gap: 17px; text-align: left; padding: 23px 8px; background: transparent; border: 0; border-bottom: 1px solid #e5e9f1; color: #24324e; }
+.discover-job:last-child { border-bottom: 0; }
+.discover-job:hover { background: #f0f4fb; }
+.discover-job:focus-visible { outline: 2px solid #3158ef; outline-offset: -2px; }
+.discover-job .company-mark { background: #eef0f4; color: #53627a; width: 44px; height: 44px; border-radius: 10px; font-size: 18px; }
+.discover-job-main { display: flex; flex-direction: column; gap: 6px; min-width: 0; flex: 1; }
+.discover-company { font-size: 12px; color: #65728b; }
+.discover-job-main > strong { font-size: 16px; font-weight: 650; line-height: 1.65; letter-spacing: -.35px; word-break: keep-all; overflow-wrap: anywhere; }
+.discover-meta { display: flex; flex-wrap: wrap; gap: 5px 14px; color: #66748b; font-size: 12px; }
+.discover-meta > span { display: inline-flex; align-items: center; gap: 4px; }
+.discover-job-side { display: flex; flex-direction: column; align-items: flex-end; gap: 9px; min-width: 100px; color: #75829a; font-size: 11px; }
+.discover-job > svg { color: #8b96a8; flex-shrink: 0; }
+.discover-saved { display: inline-flex; align-items: center; gap: 5px; color: #3458b9; }
+.discover-pagination { display: flex; align-items: center; justify-content: center; gap: 18px; margin: 24px 0 18px; }
+.discover-pagination > span { color: #64718a; font-size: 13px; }
+.discover-footnotes, .discover-connection { color: #68758d; font-size: 12px; line-height: 1.9; }
+.discover-footnotes p { margin: 5px 0; }
+.discover-connection { margin-top: 26px; padding-top: 17px; border-top: 1px solid #e0e5ef; }
+.discover-connection summary { cursor: pointer; color: #3e4e68; }
+.discover-connection p { margin-top: 10px; max-width: 85ch; }
+.discover-loading { display: flex; align-items: center; justify-content: center; gap: 12px; padding: 52px 20px; color: #68758d; font-size: 14px; }
+.discover-error { display: flex; align-items: flex-start; gap: 12px; margin: 18px 0; padding: 21px; background: #fff9f2; border: 1px solid #f0dfc8; border-radius: 10px; color: #805829; }
+.discover-error h2 { font-size: 16px; margin: 0 0 8px; }
+.discover-error p { font-size: 12px; line-height: 1.9; margin: 4px 0; }
+.discover-error > svg { flex-shrink: 0; margin-top: 2px; }
+.discover-error a { display: inline-flex; gap: 6px; align-items: center; font-size: 12px; margin-top: 10px; color: #2348a8; }
+.discover-detail-status { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.discover-facts { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin: 24px 0; padding-bottom: 24px; border-bottom: 1px solid #e4e9f1; }
+.discover-facts dt { font-size: 11px; color: #7b879b; margin-bottom: 5px; }
+.discover-facts dd { margin: 0; font-size: 13px; color: #3d4c65; line-height: 1.7; }
+.discover-checked { margin: 26px 0 6px; font-size: 11px; color: #728097; line-height: 1.9; }
+.discover-detail-actions { display: flex; justify-content: flex-end; gap: 10px; flex-wrap: wrap; padding-top: 22px; margin-top: 12px; border-top: 1px solid #e4e9f1; }
+.workspace .legacy-samples { display: flex; align-items: center; gap: 14px; padding: 12px 24px; border-bottom: 1px solid #dfd8bd; background: #fffbed; color: #6e613a; font-size: 12px; line-height: 1.8; }
+.workspace .legacy-samples p { flex: 1; }
+@media (max-width: 1020px) {
+  .discover-search { flex-wrap: wrap; }
+  .discover-query { flex-basis: 100%; min-height: 44px; }
+  .discover-search > label:not(.discover-query) { flex: 1; }
+  .discover-heading { flex-wrap: wrap; }
+}
+@media (max-width: 760px) {
+  .discover-heading { align-items: flex-start; gap: 15px; margin-bottom: 20px; }
+  .discover-heading h1 { font-size: 25px; }
+  .discover-heading p { font-size: 13px; }
+  .discover-search { padding: 10px; gap: 8px; }
+  .discover-search > .button { flex-basis: 100%; }
+  .discover-source-time > span:last-child { margin-left: 0; }
+  .discover-job { flex-wrap: wrap; gap: 12px; padding: 20px 2px; }
+  .discover-job > .company-mark { width: 35px; height: 35px; font-size: 15px; }
+  .discover-job-main { flex-basis: calc(100% - 55px); }
+  .discover-job-main > strong { font-size: 15px; }
+  .discover-job-side { margin-left: 47px; flex-direction: row; flex-wrap: wrap; justify-content: flex-start; align-items: center; flex: 1; min-width: 0; }
+  .discover-job > svg { display: none; }
+  .discover-facts { gap: 15px; }
+  .discover-detail-actions > .button { flex: 1; }
+  .workspace .legacy-samples { align-items: flex-start; flex-wrap: wrap; padding: 12px 18px; }
+}

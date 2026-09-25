@@ -17,11 +17,15 @@ export function CompanyMark({ job, small = false }: { job: Pick<Job, 'company' |
 export function effectiveStatus(job: Job): Job['status'] {
   const deadline = job.deadline && new Date(job.deadline.length === 10 ? `${job.deadline}T23:59:59+09:00` : job.deadline).getTime();
   if (job.status === 'closed' || (deadline && deadline < Date.now())) return 'closed';
+  if (job.verification === 'source' && job.status === 'open') {
+    const age = Date.now() - Date.parse(job.verifiedAt);
+    if (!Number.isFinite(age) || age > 30 * 60_000 || age < -300_000) return 'unknown';
+  }
   return job.status;
 }
 export function JobBadge({ job }: { job: Job }) {
   const status = effectiveStatus(job);
-  return <Tag tone={status === 'open' ? 'green' : status === 'closed' ? 'neutral' : 'orange'}><span className="status-dot"/>{status === 'open' ? '접수 중' : status === 'closed' ? '마감' : '미확인'}{job.isDemo ? ' · 예시' : job.verification === 'manual' ? ' · 직접 확인' : ''}</Tag>;
+  return <Tag tone={status === 'open' ? 'green' : status === 'closed' ? 'neutral' : 'orange'}><span className="status-dot"/>{status === 'open' ? '접수 중' : status === 'closed' ? '마감' : '미확인'}{job.isDemo ? ' · 예시' : job.verification === 'manual' ? ' · 직접 확인' : job.verification === 'source' ? ' · 출처 조회' : ''}</Tag>;
 }
 export function ExternalJobLink({ job, label = '원본 공고', className = '' }: { job: Job; label?: string; className?: string }) {
   const url = safeUrl(job.sourceUrl);

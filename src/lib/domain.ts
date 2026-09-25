@@ -563,7 +563,7 @@ const mimeField = z
 const kindField = z.enum(['이력서', '자기소개서', '경력기술서', '포트폴리오']);
 const stageField = z.enum(['preparing', 'applied', 'interview', 'offer', 'closed']);
 const jobStatusField = z.enum(['open', 'closed', 'unknown']);
-const verificationField = z.enum(['demo', 'manual', 'unverified']);
+const verificationField = z.enum(['demo', 'manual', 'unverified', 'source']);
 const colorField = z.enum(['blue', 'green', 'orange', 'violet', 'ink']);
 
 const jobSchema = z
@@ -593,6 +593,9 @@ const jobSchema = z
     color: colorField,
   })
   .strict();
+
+/** Validate normalized public-source data before it enters the local workspace. */
+export function parseRemoteJob(value: unknown): Job { return jobSchema.parse(value); }
 
 const documentSchema = z
   .object({

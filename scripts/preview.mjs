@@ -8,7 +8,8 @@ const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const runtime = resolve(root, '.local');
 const pidFile = resolve(runtime, 'preview.pid');
 const logFile = resolve(runtime, 'preview.log');
-const cli = resolve(root, 'node_modules/vite/bin/vite.js');
+const cli = resolve(root, 'server/index.mjs');
+const legacyCli = resolve(root, 'node_modules/vite/bin/vite.js');
 const port = 4178;
 const action = process.argv[2] || 'start';
 
@@ -17,7 +18,7 @@ async function runningPid() {
     const pid = Number((await readFile(pidFile, 'utf8')).trim());
     if (!Number.isInteger(pid) || pid <= 1) return null;
     const cmdline = await readFile(`/proc/${pid}/cmdline`, 'utf8');
-    return cmdline.includes(cli) && cmdline.includes('preview') ? pid : null;
+    return cmdline.includes(cli) || (cmdline.includes(legacyCli) && cmdline.includes('preview')) ? pid : null;
   } catch { return null; }
 }
 function portAvailable() {
@@ -40,7 +41,7 @@ async function main() {
   await readFile(resolve(root, 'dist/index.html'));
   await mkdir(runtime, { recursive: true });
   const log = await open(logFile, 'a');
-  const child = spawn(process.execPath, [cli, 'preview', '--host', '127.0.0.1', '--port', String(port), '--strictPort'], { cwd: root, detached: true, stdio: ['ignore', log.fd, log.fd] });
+  const child = spawn(process.execPath, [cli, '--port', String(port)], { cwd: root, detached: true, stdio: ['ignore', log.fd, log.fd] });
   await new Promise((resolveSpawn, reject) => { child.once('spawn', resolveSpawn); child.once('error', reject); });
   if (!child.pid) throw new Error('Preview process did not return a process ID.');
   await writeFile(pidFile, String(child.pid), { mode: 0o600 });
@@ -48,7 +49,7 @@ async function main() {
   await log.close();
   const timeout = Date.now() + 12000;
   while (Date.now() < timeout) {
-    try { const result = await fetch(`http://127.0.0.1:${port}/`, { signal: AbortSignal.timeout(1500) }); if (result.ok) { console.log(`JariZip preview: http://localhost:${port}\nProcess: ${child.pid}\nLog: ${logFile}\nStop only this preview: npm run preview:stop`); return; } } catch { /* Readiness retry. */ }
+    try { const result = await fetch(`http://127.0.0.1:${port}/api/sources`, { signal: AbortSignal.timeout(1500) }); if (result.ok) { console.log(`JariZip preview: http://localhost:${port}\nProcess: ${child.pid}\nLog: ${logFile}\nStop only this preview: npm run preview:stop`); return; } } catch { /* Readiness retry. */ }
     await new Promise(resolveDelay => setTimeout(resolveDelay, 150));
   }
   throw new Error(`Preview did not become ready. Check ${logFile}; no unrelated processes were changed.`);

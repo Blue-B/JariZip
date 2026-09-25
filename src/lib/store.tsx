@@ -10,7 +10,7 @@ import {
 } from 'react';
 import { del, get, set } from 'idb-keyval';
 import { validateBackup, id } from './domain';
-import { createDemoState, createEmptyState } from './seed';
+import { createEmptyState } from './seed';
 import type { WorkspaceState } from './types';
 
 /* -------------------------------------------------------------------------- */
@@ -82,7 +82,7 @@ async function loadStoredState(): Promise<{
       if (meta?.demoSeeded) {
         return { state: createEmptyState(), meta, unavailable: false, corrupt: false, needsSeed: false };
       }
-      return { state: createDemoState(), meta, unavailable: false, corrupt: false, needsSeed: true };
+      return { state: createEmptyState(), meta, unavailable: false, corrupt: false, needsSeed: true };
     }
 
     try {
@@ -102,9 +102,8 @@ async function loadStoredState(): Promise<{
     }
   } catch {
     // IndexedDB is unavailable (private mode, blocked storage, SSR/test env).
-    // Keep the demo so first-time visitors still see something, and report the
-    // honest `temporary` storage status.
-    return { state: createDemoState(), meta: null, unavailable: true, corrupt: false, needsSeed: false };
+    // Never fill storage or network failures with invented records.
+    return { state: createEmptyState(), meta: null, unavailable: true, corrupt: false, needsSeed: false };
   }
 }
 
@@ -270,7 +269,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
           demoSeeded: false,
         };
         try {
-          await set(META_KEY, { ...meta, demoSeeded: true });
+          await set(META_KEY, { ...meta, demoSeeded: false });
         } catch (error) {
           if (!cancelled) {
             const failure = describeStorageError(error);

@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures';
 
 test('mobile search has a name and save notifications leave bottom navigation clickable', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });

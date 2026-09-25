@@ -6,7 +6,7 @@ test('footer opens the promised workspace and scrolls without replacing the app 
   await expect(page).toHaveURL(/#\/app\/documents$/);
   await expect(page.locator('h1')).toHaveText('내 이야기가 쌓이는 서랍');
   await page.goto('/#/', { waitUntil: 'networkidle' });
-  await page.locator('footer').getByRole('link', { name: '지원 보드', exact: true }).click();
+  await page.locator('footer').getByRole('link', { name: '지원 현황', exact: true }).click();
   await expect(page).toHaveURL(/#\/app\/applications$/);
   await expect(page.locator('h1')).toHaveText('모든 지원에, 나만의 흐름');
   await page.goto('/#/', { waitUntil: 'networkidle' });
