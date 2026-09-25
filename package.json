@@ -1,0 +1,43 @@
+{
+  "name": "jarizip",
+  "private": true,
+  "version": "0.1.0",
+  "description": "A local-first career workspace for Korean job seekers",
+  "type": "module",
+  "license": "MIT",
+  "engines": { "node": ">=22.12.0" },
+  "scripts": {
+    "dev": "vite --host 127.0.0.1",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview --host 127.0.0.1 --port 4178 --strictPort",
+    "preview:start": "node scripts/preview.mjs start",
+    "preview:stop": "node scripts/preview.mjs stop",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:e2e": "playwright test",
+    "check": "npm run typecheck && npm test && npm run build"
+  },
+  "dependencies": {
+    "@fontsource-variable/manrope": "5.3.0",
+    "@fontsource-variable/noto-sans-kr": "5.3.0",
+    "idb-keyval": "6.3.0",
+    "lucide-react": "1.48.0",
+    "mammoth": "1.12.3",
+    "motion": "13.4.4",
+    "pdfjs-dist": "6.3.289",
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
+    "react-router-dom": "7.18.4",
+    "zod": "4.6.5"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.63.0",
+    "@types/node": "26.6.2",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "@vitejs/plugin-react": "6.1.1",
+    "typescript": "7.0.2",
+    "vite": "8.3.1",
+    "vitest": "5.0.2"
+  }
+}

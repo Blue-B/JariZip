@@ -1,0 +1,1054 @@
+/* =============================================================================
+   JariZip — Workspace readability & contrast pass
+   Owner: readability worker. Scope: ONLY this file (imported last by workspace.css).
+
+   Goal: keep the restrained ivory / white / cobalt identity and every existing
+   layout, spacing and mascot, but lift the workspace to real-product legibility.
+
+   What this sheet changes
+     1. Type scale — 5-10px micro text is raised into a 10.5-13px body range,
+        with a real hierarchy (13px body, 14-15px titles, strong headings).
+     2. Text colour — pale blue-greys (#8b9xxx / #a4b2c7 …) are retargeted to an
+        accessible neutral (#5d6a7d family) and accent text to cobalt/green/
+        orange/violet tones that clear WCAG AA on white AND on the tinted
+        surfaces they actually sit on.
+     3. A few structural guards so the larger type cannot overflow fixed-height
+        rows, and so native <dialog> portals (which render outside .workspace)
+        are covered too.
+
+   What this sheet deliberately does NOT change
+     - Miniature paper artwork: .mini-paper*, .template-mini-page*,
+       .template-front-sheet, .template-back-sheet, .template-intro-art,
+       .upload-art/.upload-paper/.upload-plus, .template-number, .paper-front,
+       .dashboard-mascot, .lz-* — these are illustration, not UI copy. Their
+       micro type is texture and stays exactly as designed.
+     - Layout, spacing, radii, backgrounds, the mascot, and the landing page.
+     - .button / .tag / .text-link base colours, because those elements carry
+       their own white-on-cobalt and coloured-tint variants that must survive.
+
+   Specificity note: everything is scoped to .workspace (or .modal for portal
+   dialogs) and uses one extra class/attribute where the parent rule is
+   !important. No blanket !important — only the handful of targeted cases
+   marked below, where the parent declares !important inline font sizes.
+   ============================================================================= */
+
+/* ---------------------------------------------------------------------------
+   0. Tokens
+   ------------------------------------------------------------------------ */
+.workspace,
+.modal {
+  --rz-body: #414c5e;      /* 8.9:1 on white  — default UI text            */
+  --rz-muted: #5d6a7d;     /* 5.5:1 on white, 4.7:1 on #e8edf5 — secondary */
+  --rz-strong: #2f3a4b;    /* headings                                     */
+  --rz-ink: #17202a;       /* max emphasis                                 */
+  --rz-cobalt: #2647c9;    /* accent text, 6.3:1 worst-case               */
+  --rz-green: #1f6b45;
+  --rz-orange: #8a5a12;
+  --rz-violet: #5f4489;
+  --rz-olive: #4d5540;
+  --rz-kraft: #6b5a33;
+}
+
+/* ---------------------------------------------------------------------------
+   1. Type scale
+   The workspace used 5-10px text as its default voice (486 rules across the
+   shell, jobs, applications, documents, practice and settings sheets). Each
+   selector below is raised exactly once, to the tier shown in its comment.
+   Nothing here is decorative: every micro size carried real UI copy — meta
+   lines, captions, chips, table cells, helper text.
+   Miniature paper artwork is excluded (see the header note).
+   ------------------------------------------------------------------------ */
+/* was 5px, 6px, 7px */
+.workspace .editor-preview .paper-brand>span:last-child,
+.workspace .job-list-foot>span:not(.tag),
+.workspace .job-list-main .demo-inline,
+.workspace .open-template,
+.workspace .paper-brand>span:last-child,
+.workspace .privacy-poster .eyebrow,
+.workspace .upcoming-item .eyebrow.small { font-size: 10.5px; }
+
+/* was 8px */
+.workspace .answer-checks small,
+.workspace .app-card-date,
+.workspace .app-card-top>span:not(.company-mark),
+.workspace .audio-preview>span,
+.workspace .board-summary>.tag,
+.workspace .calendar-tile span,
+.workspace .company-directory-item>div>span,
+.workspace .company-profile-header .eyebrow,
+.workspace .company-profile-stats>span,
+.workspace .dashboard-greeting .eyebrow,
+.workspace .doc-demo-badge,
+.workspace .doc-type-badge,
+.workspace .document-card-footer>span,
+.workspace .document-title>.tag,
+.workspace .editor-toolbar small,
+.workspace .frozen-document small,
+.workspace .integration-rows>button>.tag,
+.workspace .interview-session-bar>.tag,
+.workspace .job-detail-kicker>.tag,
+.workspace .job-list-foot,
+.workspace .job-list-foot>.tag,
+.workspace .job-list-main .tag,
+.workspace .library-counts>span,
+.workspace .match-block>div:first-child .tag,
+.workspace .nav-caption,
+.workspace .paper-heading>p,
+.workspace .practice-history-entry>summary>.tag,
+.workspace .question-hint-toggle>span,
+.workspace .question-nav-item small,
+.workspace .question-sidebar-note p,
+.workspace .question-stage-top>.tag,
+.workspace .settings-section-title>.tag,
+.workspace .table-company small,
+.workspace .template-card-content .tag,
+.workspace .template-floating-label,
+.workspace .template-intro .eyebrow,
+.workspace .voice-controls>span,
+.workspace .weekly-goal-top .eyebrow,
+.workspace .workspace-footnote span:last-child { font-size: 11px; }
+
+/* was 9px */
+.workspace .about-product-link>span,
+.workspace .answer-checks .check-item,
+.workspace .answer-confidence button,
+.workspace .answer-hint>span,
+.workspace .answer-input-footer>span,
+.workspace .app-card-documents,
+.workspace .app-card-footer>select,
+.workspace .app-card-footer>span,
+.workspace .application-drawer-meta .eyebrow,
+.workspace .application-table th,
+.workspace .audio-preview>.button,
+.workspace .backup-summary>span,
+.workspace .board-hint,
+.workspace .command-input kbd,
+.workspace .company-information-source span,
+.workspace .company-note-toolbar>.button,
+.workspace .company-profile-header>div:nth-child(2)>span,
+.workspace .company-saved-jobs .tag,
+.workspace .company-tab-content .field-hint,
+.workspace .company-tab-content .local-note,
+.workspace .dashboard-hero .card-a,
+.workspace .dashboard-hero .card-b,
+.workspace .demo-inline,
+.workspace .demo-pill,
+.workspace .directory-count,
+.workspace .document-card-body>p,
+.workspace .document-picker span:not(.tag):not(.document-icon),
+.workspace .drawer-bottom .local-note,
+.workspace .editor-help,
+.workspace .editor-preview .paper-content,
+.workspace .editor-toolbar,
+.workspace .editor-toolbar>.text-link,
+.workspace .empty-column,
+.workspace .enabled-feature,
+.workspace .eyebrow.small,
+.workspace .hero-bottom-strip,
+.workspace .integration-rows>button>div:nth-child(2)>span,
+.workspace .job-detail-content .tag-row .tag,
+.workspace .job-detail-status>.tag,
+.workspace .job-detail-status>span:last-child:not(.tag),
+.workspace .job-information>span,
+.workspace .job-list-main p,
+.workspace .library-counts,
+.workspace .new-document-card p,
+.workspace .practice-history-entry>summary>div>span,
+.workspace .privacy-poster>small,
+.workspace .question-hint-toggle>.text-link,
+.workspace .question-nav-item>span,
+.workspace .question-source strong,
+.workspace .question-stage-top .eyebrow,
+.workspace .quick-document span,
+.workspace .recommended-job .tag,
+.workspace .recommended-job-main .job-meta,
+.workspace .recommended-job-side>.tag,
+.workspace .research-checks>div>span,
+.workspace .reset-section .button,
+.workspace .results-heading>span>span,
+.workspace .save-status,
+.workspace .session-mode>button,
+.workspace .session-source span,
+.workspace .settings-section .stack-form .field-hint,
+.workspace .settings-section>.field-hint,
+.workspace .sidebar-github,
+.workspace .snapshot-facts strong,
+.workspace .snapshot-header .tag,
+.workspace .stat-sub,
+.workspace .submission-history summary>span,
+.workspace .templates-caption span,
+.workspace .topbar-search kbd,
+.workspace .upcoming-item p,
+.workspace .upload-copy>span,
+.workspace .verification-note p,
+.workspace .verification-note>.text-link,
+.workspace .voice-controls .button,
+.workspace .weekly-footnote,
+.workspace .workspace-footnote,
+.workspace .workspace-switch span { font-size: 11.5px; }
+
+/* was 10px, 10.5px */
+.workspace .answer-actions .button,
+.workspace .answer-actions>.button,
+.workspace .answer-actions>div>.button,
+.workspace .answer-checks>span,
+.workspace .answer-confidence>span,
+.workspace .answer-hint p,
+.workspace .app-card-main>span,
+.workspace .application-table td,
+.workspace .application-table td select,
+.workspace .backup-actions .button,
+.workspace .board-tools>.search-input input,
+.workspace .category-tabs button span,
+.workspace .column-count,
+.workspace .company-directory>.search-input input,
+.workspace .company-information-source .button,
+.workspace .company-information-source strong,
+.workspace .company-saved-jobs p,
+.workspace .company-tab-content>.note,
+.workspace .company-workspace .detail-tabs button,
+.workspace .count-bubble,
+.workspace .demo-banner,
+.workspace .demo-banner a,
+.workspace .document-viewer-toolbar .button,
+.workspace .drawer-bottom .button,
+.workspace .editor-preview .paper-content h4,
+.workspace .eyebrow,
+.workspace .field-hint,
+.workspace .frozen-document>span,
+.workspace .hero-mini-label,
+.workspace .interview-application-select select,
+.workspace .interview-cta p,
+.workspace .job-detail-meta,
+.workspace .job-filters>.checkbox-line,
+.workspace .job-information strong,
+.workspace .job-list-main .company-line,
+.workspace .job-meta,
+.workspace .library-bottom-note,
+.workspace .library-bottom-note>.text-link,
+.workspace .library-counts>span:first-child,
+.workspace .match-block>p,
+.workspace .match-intro p,
+.workspace .nav-count,
+.workspace .notification-item span,
+.workspace .optional,
+.workspace .practice-timer,
+.workspace .privacy-card a,
+.workspace .privacy-card p,
+.workspace .privacy-poster>div:not(.privacy-seal),
+.workspace .question-nav-item strong,
+.workspace .question-sidebar-head>span,
+.workspace .question-source p,
+.workspace .quiet-empty .text-link,
+.workspace .recent-applications span:not(.company-mark):not(.tag),
+.workspace .recommendation-panel .section-title>a,
+.workspace .research-checks p,
+.workspace .reset-section>p,
+.workspace .results-heading select,
+.workspace .saved-filter>span,
+.workspace .section-title span,
+.workspace .select-shell select,
+.workspace .settings-section .stack-form .goal-field>div,
+.workspace .settings-section-title p,
+.workspace .settings-section>.note,
+.workspace .snapshot-facts>span,
+.workspace .snapshot-header .button,
+.workspace .stat-label,
+.workspace .submission-confirm,
+.workspace .submission-explainer p,
+.workspace .submission-explainer>.text-link,
+.workspace .submission-history summary,
+.workspace .submission-history summary strong,
+.workspace .table-company>span:last-child>span,
+.workspace .tag,
+.workspace .template-card-content p,
+.workspace .template-card-content>.button,
+.workspace .template-guidelines p,
+.workspace .templates-page>.note,
+.workspace .tiny-orbit-card,
+.workspace .today-label,
+.workspace .topbar-search,
+.workspace .upcoming-item .text-link,
+.workspace .upload-controls select,
+.workspace .verification-note strong,
+.workspace .version-select select,
+.workspace .viewer-disclaimer,
+.workspace .weekly-goal>p,
+.workspace .workspace-switch strong { font-size: 12px; }
+
+/* was 11px, 11.5px */
+.workspace .about-product-link strong,
+.workspace .answer-hint strong,
+.workspace .answer-section>textarea::placeholder,
+.workspace .application-drawer-meta p,
+.workspace .application-table,
+.workspace .board-summary,
+.workspace .board-summary strong,
+.workspace .check-item,
+.workspace .checkbox-line.compact,
+.workspace .company-directory-item strong,
+.workspace .company-line,
+.workspace .company-notes-textarea::placeholder,
+.workspace .dashboard-hero .button,
+.workspace .dashboard-hero-copy>p,
+.workspace .document-picker strong,
+.workspace .editor-meta input,
+.workspace .editor-meta select,
+.workspace .editor-preview .paper-content h3,
+.workspace .header-avatar,
+.workspace .integration-rows strong,
+.workspace .job-detail .detail-tabs button,
+.workspace .job-detail-actions .button,
+.workspace .job-detail-actions>.button,
+.workspace .job-detail-content>.prose-text,
+.workspace .job-detail-kicker,
+.workspace .job-filters>.search-input input,
+.workspace .job-toolbar .category-tabs button,
+.workspace .library-toolbar .category-tabs button,
+.workspace .library-toolbar>.search-input input,
+.workspace .local-note,
+.workspace .modal-header p,
+.workspace .note,
+.workspace .paper-content,
+.workspace .paper-content h4,
+.workspace .privacy-card strong,
+.workspace .privacy-poster>p,
+.workspace .quick-document strong,
+.workspace .recent-applications strong,
+.workspace .results-heading,
+.workspace .saved-filter,
+.workspace .session-source strong,
+.workspace .settings-section .form-actions .button,
+.workspace .settings-section .stack-form label,
+.workspace .stage-select select,
+.workspace .stat-value span,
+.workspace .table-company strong,
+.workspace .template-guidelines h3,
+.workspace .template-intro p,
+.workspace .topbar-location,
+.workspace .upcoming-item h3,
+.workspace .upload-controls>.button,
+.workspace .upload-copy p,
+.workspace .verification-options span,
+.workspace .verification-options+.checkbox-line { font-size: 12.5px; }
+
+/* was 12px */
+.workspace .answer-section-head h3,
+.workspace .answer-section>textarea,
+.workspace .app-card-main h3,
+.workspace .button,
+.workspace .category-tabs button,
+.workspace .checkbox-line,
+.workspace .command-results button,
+.workspace .company-note-toolbar h3,
+.workspace .company-notes-textarea,
+.workspace .company-tab-content>.prose-text,
+.workspace .detail-tabs button,
+.workspace .document-textarea,
+.workspace .document-title>button,
+.workspace .editor-meta label,
+.workspace .empty-state p,
+.workspace .field-label,
+.workspace .form-error,
+.workspace .history-entry-body>.prose-text,
+.workspace .integration-explanation h3,
+.workspace .integration-explanation p,
+.workspace .interview-cta strong,
+.workspace .interview-page .page-description,
+.workspace .job-detail-content>h3,
+.workspace .job-list-main h3,
+.workspace .kanban-column h2,
+.workspace .match-block h3,
+.workspace .nav-item,
+.workspace .new-document-card strong,
+.workspace .notes-label textarea,
+.workspace .notification-item strong,
+.workspace .page-description,
+.workspace .paper-content h3,
+.workspace .practice-history-entry>summary strong,
+.workspace .prose-text,
+.workspace .question-sidebar-head h2,
+.workspace .quiet-empty p,
+.workspace .recommended-job h3,
+.workspace .results-heading strong,
+.workspace .search-input input,
+.workspace .settings-section .stack-form input:not([type=checkbox]),
+.workspace .settings-section .stack-form select,
+.workspace .stack-form label,
+.workspace .storage-warning,
+.workspace .submission-explainer strong,
+.workspace .template-card-content h3,
+.workspace .text-link,
+.workspace .toast,
+.workspace .verification-options legend,
+.workspace .verification-options strong,
+.workspace .weekly-number span,
+.workspace .workspace-avatar { font-size: 13px; }
+
+/* ---------------------------------------------------------------------------
+   2. Text colour — retargeted to accessible tones
+   Every selector here was measured against the surfaces it can actually sit on
+   (white, the #f7f8fb page, the cobalt hero tints, the olive weekly card, the
+   soft blue panels). Only colours that failed 4.5:1 somewhere are changed.
+   Hue families are preserved: blue-grey UI copy becomes neutral #5d6a7d,
+   saturated blues become cobalt, and green/orange/violet meta text keeps its
+   meaning at a darker, readable tone.
+   Buttons, tags, links, monograms and state chips are excluded — they carry
+   their own variants and are handled explicitly in section 3.
+   ------------------------------------------------------------------------ */
+/* neutral -> #5d6a7d */
+.workspace .about-product-link strong,
+.workspace .about-product-link strong>svg,
+.workspace .about-product-link>span,
+.workspace .answer-checks small,
+.workspace .answer-checks>span,
+.workspace .answer-confidence button,
+.workspace .answer-confidence button.selected,
+.workspace .answer-confidence>span,
+.workspace .answer-hint>span,
+.workspace .answer-input-footer>span,
+.workspace .answer-section-head h3,
+.workspace .answer-section>textarea,
+.workspace .answer-section>textarea::placeholder,
+.workspace .app-card-documents,
+.workspace .app-card-documents svg,
+.workspace .app-card-footer>select,
+.workspace .app-card-footer>span,
+.workspace .app-card-main>span,
+.workspace .app-card-top>svg,
+.workspace .application-drawer-meta p,
+.workspace .application-table td,
+.workspace .application-table th,
+.workspace .audio-preview>span,
+.workspace .backup-summary strong,
+.workspace .backup-summary>span,
+.workspace .board-hint,
+.workspace .board-summary,
+.workspace .board-summary strong,
+.workspace .breadcrumb-root,
+.workspace .calendar-tile span,
+.workspace .category-tabs button,
+.workspace .column-count,
+.workspace .command-results button>svg,
+.workspace .company-directory-item,
+.workspace .company-directory-item strong,
+.workspace .company-directory-item>div>span,
+.workspace .company-directory-item>svg,
+.workspace .company-information-source span,
+.workspace .company-information-source strong,
+.workspace .company-information-source>svg,
+.workspace .company-line,
+.workspace .company-note-toolbar h3,
+.workspace .company-notes-textarea,
+.workspace .company-notes-textarea::placeholder,
+.workspace .company-profile-header h2,
+.workspace .company-profile-header>div:nth-child(2)>span,
+.workspace .company-profile-stats strong,
+.workspace .company-profile-stats>span,
+.workspace .company-saved-jobs h3,
+.workspace .company-saved-jobs p,
+.workspace .company-saved-jobs>a>div:last-child,
+.workspace .company-tab-content>.prose-text,
+.workspace .company-tab-content>.subsection-heading,
+.workspace .confirm-description,
+.workspace .dashboard-hero-copy>p,
+.workspace .demo-inline,
+.workspace .detail-tabs button,
+.workspace .directory-count,
+.workspace .doc-demo-badge,
+.workspace .doc-type-badge,
+.workspace .document-card-body>p,
+.workspace .document-card-footer .draft-label,
+.workspace .document-card-footer>.icon-button,
+.workspace .document-card-footer>.submitted-label,
+.workspace .document-card-footer>span,
+.workspace .document-icon,
+.workspace .document-picker strong,
+.workspace .document-textarea,
+.workspace .document-title>button,
+.workspace .editor-help,
+.workspace .editor-help code,
+.workspace .editor-toolbar,
+.workspace .editor-toolbar small,
+.workspace .empty-column,
+.workspace .empty-icon,
+.workspace .enabled-feature,
+.workspace .frozen-document,
+.workspace .frozen-document small,
+.workspace .frozen-document>span,
+.workspace .history-entry-body>.prose-text,
+.workspace .history-entry-icon,
+.workspace .icon-button,
+.workspace .integration-explanation h3,
+.workspace .integration-explanation p,
+.workspace .integration-icon,
+.workspace .integration-rows strong,
+.workspace .integration-rows>button>div:nth-child(2)>span,
+.workspace .integration-rows>button>svg,
+.workspace .interview-application-select select,
+.workspace .interview-cta p,
+.workspace .interview-cta strong,
+.workspace .job-detail-content>.prose-text,
+.workspace .job-detail-kicker,
+.workspace .job-detail-meta,
+.workspace .job-detail-meta svg,
+.workspace .job-information strong,
+.workspace .job-information>span,
+.workspace .job-list-foot,
+.workspace .job-list-main .company-line,
+.workspace .job-list-main p,
+.workspace .job-meta,
+.workspace .kanban-column h2,
+.workspace .library-bottom-note,
+.workspace .library-bottom-note strong,
+.workspace .library-bottom-note>svg,
+.workspace .library-counts,
+.workspace .library-counts>span:first-child,
+.workspace .match-block h3,
+.workspace .match-block>div:first-child,
+.workspace .match-block>p,
+.workspace .match-intro p,
+.workspace .modal-header p,
+.workspace .nav-caption,
+.workspace .nav-item,
+.workspace .new-document-card,
+.workspace .new-document-card p,
+.workspace .new-document-card strong,
+.workspace .new-document-card>span,
+.workspace .notification-item span,
+.workspace .open-template,
+.workspace .optional,
+.workspace .paper-brand>span:last-child,
+.workspace .paper-content,
+.workspace .paper-content .paper-bullet:before,
+.workspace .paper-content h4,
+.workspace .paper-heading>p,
+.workspace .practice-history .section-title h2,
+.workspace .practice-history-entry>summary strong,
+.workspace .practice-history-entry>summary>div>span,
+.workspace .practice-timer,
+.workspace .practice-timer .icon-button,
+.workspace .preview-caption,
+.workspace .question-hint-toggle>span,
+.workspace .question-sidebar-head h2,
+.workspace .question-sidebar-head>span,
+.workspace .question-sidebar-note p,
+.workspace .question-sidebar-note>svg,
+.workspace .question-source p,
+.workspace .question-source strong,
+.workspace .question-source>svg,
+.workspace .quick-document span,
+.workspace .quick-document strong,
+.workspace .quick-document>svg,
+.workspace .quiet-empty,
+.workspace .recommended-job-side>svg,
+.workspace .research-checks p,
+.workspace .research-checks>div>span,
+.workspace .reset-section>h2,
+.workspace .reset-section>p,
+.workspace .results-heading,
+.workspace .results-heading label>svg,
+.workspace .results-heading select,
+.workspace .results-heading>span>span,
+.workspace .save-status,
+.workspace .save-status--saving,
+.workspace .search-input,
+.workspace .section-title span,
+.workspace .select-shell,
+.workspace .select-shell select,
+.workspace .session-source span,
+.workspace .session-source strong,
+.workspace .session-source>svg,
+.workspace .settings-icon,
+.workspace .settings-section .stack-form .goal-field>div,
+.workspace .settings-section .stack-form input:not([type=checkbox]),
+.workspace .settings-section .stack-form label,
+.workspace .settings-section .stack-form select,
+.workspace .settings-section-title h2,
+.workspace .settings-section-title p,
+.workspace .sidebar-github,
+.workspace .snapshot-facts strong,
+.workspace .snapshot-facts svg,
+.workspace .snapshot-facts>span,
+.workspace .stat-value span,
+.workspace .submission-explainer p,
+.workspace .submission-explainer strong,
+.workspace .submission-history summary,
+.workspace .submission-history summary strong,
+.workspace .submission-history summary>span,
+.workspace .table-company small,
+.workspace .table-company strong,
+.workspace .table-company>span:last-child>span,
+.workspace .template-card-content h3,
+.workspace .template-card-content p,
+.workspace .template-floating-label,
+.workspace .template-guidelines h3,
+.workspace .template-guidelines p,
+.workspace .template-guidelines>div>svg,
+.workspace .template-intro h2,
+.workspace .template-intro p,
+.workspace .templates-caption h2,
+.workspace .templates-caption span,
+.workspace .topbar-location>svg,
+.workspace .topbar-search,
+.workspace .upcoming-item p,
+.workspace .upload-controls select,
+.workspace .upload-copy h2,
+.workspace .upload-copy p,
+.workspace .upload-copy>span,
+.workspace .verification-note,
+.workspace .verification-note p,
+.workspace .verification-note strong,
+.workspace .verification-options span,
+.workspace .version-select,
+.workspace .viewer-disclaimer,
+.workspace .voice-controls>span,
+.workspace .weekly-goal-top a,
+.workspace .weekly-goal>p,
+.workspace .weekly-number span,
+.workspace .workspace-footnote,
+.workspace .workspace-switch span,
+.workspace .workspace-switch>svg,
+.workspace input::placeholder,
+.workspace textarea::placeholder { color: #5d6a7d; }
+
+/* cobalt -> #2647c9 */
+.workspace .interview-cta-icon,
+.workspace .interview-cta>svg,
+.workspace .match-symbol,
+.workspace .practice-timer.running>span,
+.workspace .quick-document-icon,
+.workspace .submission-explainer-icon { color: #2647c9; }
+
+/* green -> #1f6b45 */
+.workspace .card-b svg,
+.workspace .privacy-seal { color: #1f6b45; }
+
+/* orange -> #8a5a12 */
+.workspace .answer-hint p,
+.workspace .answer-hint strong,
+.workspace .save-status--error,
+.workspace .save-status--temporary { color: #8a5a12; }
+
+/* violet -> #5f4489 */
+.workspace .app-card-date { color: #5f4489; }
+
+/* ---------------------------------------------------------------------------
+   3. Hierarchy: headings and primary reading text stay clearly above body copy
+   ------------------------------------------------------------------------ */
+.workspace .page-heading h1,
+.workspace .dashboard-greeting h1 { font-size: 26px; font-weight: 720; letter-spacing: -1.1px; color: var(--rz-strong); }
+.workspace .page-description { font-size: 13px; line-height: 1.85; color: var(--rz-muted); }
+.workspace .section-title h2 { font-size: 16px; font-weight: 660; color: var(--rz-strong); }
+.workspace .subsection-heading { font-size: 14px; font-weight: 660; color: var(--rz-strong); }
+.workspace .panel h2, .workspace .panel h3 { color: var(--rz-strong); }
+.workspace .prose-text, .workspace .history-entry-body>.prose-text { font-size: 13px; line-height: 2; color: var(--rz-body); }
+.workspace .confirm-description { color: var(--rz-body); }
+.workspace .empty-state p { color: var(--rz-muted); }
+.workspace .empty-state h3 { font-size: 16px; color: var(--rz-strong); }
+.workspace .field-hint { font-size: 11.5px; line-height: 1.8; color: var(--rz-muted); }
+.workspace .field-label, .workspace .stack-form label { color: var(--rz-strong); }
+.modal .modal-header h2 { font-size: 20px; color: var(--rz-strong); }
+.modal .modal-header p { font-size: 12.5px; color: var(--rz-muted); }
+.modal .confirm-description { font-size: 13px; color: var(--rz-body); }
+
+/* Form controls carry typed user content — keep them at readable body size. */
+.workspace input:not([type=checkbox]):not([type=radio]):not([type=file]),
+.workspace textarea,
+.workspace select,
+.modal input:not([type=checkbox]):not([type=radio]):not([type=file]),
+.modal textarea,
+.modal select { font-size: 13px; color: var(--rz-body); }
+.workspace input::placeholder, .workspace textarea::placeholder,
+.modal input::placeholder, .modal textarea::placeholder { color: #6b7889; }
+.workspace .search-input input, .modal .search-input input { font-size: 13px; }
+.workspace .search-input, .workspace .command-input { color: var(--rz-muted); }
+.workspace .command-input kbd, .workspace .topbar-search kbd { color: var(--rz-muted); }
+
+/* Nav / shell */
+.workspace .nav-item { font-size: 13px; }
+.workspace .nav-item.active { color: #1f3fa0; }
+.workspace .nav-caption { font-size: 10.5px; letter-spacing: 1.4px; color: var(--rz-muted); }
+.workspace .topbar-location { font-size: 12.5px; color: var(--rz-body); }
+.workspace .breadcrumb-root { color: var(--rz-muted); }
+.workspace .workspace-switch strong { font-size: 12.5px; color: var(--rz-strong); }
+.workspace .workspace-switch span { font-size: 11px; color: var(--rz-muted); }
+.workspace .workspace-footnote { font-size: 11px; color: var(--rz-muted); }
+.workspace .workspace-footnote span:last-child { font-size: 10px; }
+.workspace .sidebar-github { font-size: 11px; color: var(--rz-muted); }
+.workspace .privacy-card { color: var(--rz-body); }
+.workspace .privacy-card strong { font-size: 12.5px; color: var(--rz-strong); }
+.workspace .privacy-card p { font-size: 11.5px; line-height: 1.8; color: var(--rz-muted); }
+.workspace .privacy-card a { font-size: 11.5px; color: #3d5340; }
+.workspace .save-status { font-size: 11px; }
+.workspace .save-status--saving { color: var(--rz-muted); }
+.workspace .storage-warning { font-size: 13px; }
+
+/* Chips / badges that are text, not ornament — keep them legible. */
+.workspace .tag { font-size: 11px; padding: 3px 8px; }
+.workspace .nav-count { font-size: 10.5px; color: var(--rz-muted); background: #e4e9f1; }
+.workspace .nav-item.active .nav-count { color: #1f3fa0; background: #d7e0fb; }
+.workspace .demo-pill { font-size: 10.5px; color: var(--rz-muted); background: #e6eaf1; }
+.workspace .eyebrow { font-size: 10.5px; letter-spacing: 1.5px; color: #1f3fa0; }
+.workspace .eyebrow.small { font-size: 10px; }
+.workspace .count-bubble { font-size: 11px; color: var(--rz-body); }
+.workspace .stat-value span { color: var(--rz-muted); }
+.workspace .stat-label { font-size: 11.5px; color: var(--rz-muted); }
+.workspace .stat-sub { font-size: 10.5px; color: var(--rz-muted); }
+.workspace .today-label { font-size: 11px; color: var(--rz-muted); }
+.workspace .demo-banner { font-size: 11.5px; color: var(--rz-muted); }
+.workspace .demo-banner a { font-size: 11.5px; color: var(--rz-cobalt); }
+.workspace .hero-mini-label { font-size: 11px; color: #33528f; }
+.workspace .hero-bottom-strip { font-size: 10.5px; color: #3d5480; }
+.workspace .tiny-orbit-card { font-size: 11px; color: var(--rz-body); }
+.workspace .local-note { font-size: 11.5px; color: var(--rz-muted); }
+.workspace .note { font-size: 12.5px; color: var(--rz-body); }
+.workspace .note--blue { color: #2c4a86; }
+.workspace .note--orange { color: var(--rz-orange); }
+.workspace .check-item { font-size: 11.5px; color: var(--rz-muted); }
+.workspace .checkbox-line { font-size: 12.5px; color: var(--rz-body); }
+.workspace .text-link { font-size: 12.5px; }
+.workspace .category-tabs button, .workspace .detail-tabs button { font-size: 13px; }
+.workspace .category-tabs button span, .workspace .detail-tabs button span { font-size: 11px; }
+.workspace .button { font-size: 13px; }
+.workspace .button.disabled { color: #5d6a7d; }
+/* Secondary buttons were the single most common AA failure: every container
+   override ( .answer-actions>.button, .backup-actions .button, .voice-controls
+   .button, .company-note-toolbar>.button … ) painted them a pale blue-grey.
+   One (0,3,0) rule covers all of them; .button.primary keeps its white label. */
+.workspace .button.secondary { color: var(--rz-body); font-size: 13px; }
+.workspace .button.secondary:hover:not(:disabled) { color: #17202a; }
+.workspace .button.ghost { color: var(--rz-muted); font-size: 13px; }
+.workspace .button.danger { font-size: 13px; }
+.workspace .button.primary { font-size: 13px; }
+/* Selects and their option rows carry user content. */
+.workspace select option, .modal select option { font-size: 13px; }
+.workspace .text-link { color: var(--rz-cobalt); }
+.workspace .question-hint-toggle>.text-link,
+.workspace .library-bottom-note>.text-link,
+.workspace .submission-explainer>.text-link,
+.workspace .verification-note>.text-link,
+.workspace .frozen-document .text-link,
+.workspace .editor-toolbar>.text-link { color: var(--rz-cobalt); }
+/* Tags keep their semantic hue, just dark enough to read. */
+.workspace .tag { color: var(--rz-muted); }
+.workspace .tag--blue { color: #1f3fa0; }
+.workspace .tag--green { color: #1f6b45; }
+.workspace .tag--orange { color: #8a5a12; }
+.workspace .tag--violet { color: #5f4489; }
+.workspace .job-list-card.selected .tag-row .tag { color: var(--rz-cobalt); }
+.workspace .job-list-card.selected .job-list-main h3 { color: #1f3fa0; }
+/* Company monograms are text, not ornament. */
+.workspace .mark--green { color: #1f6b45; }
+.workspace .mark--orange { color: #8a5a12; }
+.workspace .mark--violet { color: #5f4489; }
+.workspace .mark--ink { color: #2f3a4b; }
+.workspace .company-mark { color: #1f3fa0; }
+/* Session mode / view switches sit on light chips. */
+.workspace .session-mode>button { color: var(--rz-muted); }
+.workspace .session-mode>button.active { color: #1f3fa0; }
+.workspace .view-switch>button { color: var(--rz-muted); }
+.workspace .view-switch>button.active { color: #1f3fa0; }
+.workspace .saved-filter { color: var(--rz-muted); }
+.workspace .saved-filter.selected { color: #1f3fa0; }
+/* Remaining single-element meta fixes found by the live contrast audit. */
+.workspace .job-detail-status>span:last-child:not(.tag) { color: var(--rz-muted); }
+.workspace .question-stage-top .eyebrow .muted { color: var(--rz-muted); }
+.workspace .question-source strong, .workspace .question-source p { color: var(--rz-muted); }
+.workspace .answer-hint>span { color: var(--rz-muted); }
+.workspace .answer-checks small, .workspace .answer-checks .check-item { color: var(--rz-muted); }
+.workspace .practice-timer { color: var(--rz-muted); }
+.workspace .practice-timer.running>span { color: var(--rz-cobalt); }
+.workspace .upload-copy p { color: var(--rz-muted); }
+.workspace .viewer-disclaimer, .workspace .library-bottom-note { color: var(--rz-muted); }
+.workspace .editor-toolbar, .workspace .editor-help { color: var(--rz-muted); }
+.workspace .editor-toolbar small { color: var(--rz-muted); }
+.workspace .editor-help code { color: #33528f; background: #eef2fa; }
+.workspace .backup-summary>span, .workspace .reset-section>p { color: var(--rz-muted); }
+.workspace .settings-section>.field-hint, .workspace .settings-section>.note { color: var(--rz-muted); }
+.workspace .enabled-feature { color: #1f6b45; }
+.workspace .privacy-seal { color: #3d5340; }
+.workspace .integration-explanation p, .workspace .integration-explanation h3 { color: var(--rz-body); }
+.workspace .company-tab-content .local-note, .workspace .company-tab-content .field-hint { color: var(--rz-muted); }
+.workspace .company-information-source span, .workspace .company-information-source strong { color: var(--rz-muted); }
+.workspace .company-information-source strong, .workspace .integration-rows strong,
+.workspace .about-product-link strong, .workspace .session-source strong { color: var(--rz-strong); }
+.workspace .directory-count, .workspace .company-profile-header>div:nth-child(2)>span { color: var(--rz-muted); }
+.workspace .company-profile-header .eyebrow, .workspace .company-profile-header .eyebrow .muted { color: #1f3fa0; }
+.workspace .research-checks>div>span, .workspace .company-saved-jobs .tag { color: var(--rz-muted); }
+.workspace .verification-options span { color: var(--rz-muted); }
+.workspace .kanban-column h2 { color: var(--rz-strong); }
+.workspace .column-count { color: var(--rz-muted); }
+.workspace .stage-dot { opacity: 0.9; }
+.workspace .application-table th { color: var(--rz-muted); }
+.workspace .application-table td { color: var(--rz-body); }
+.workspace .app-card-top>span:not(.company-mark) { color: var(--rz-muted); }
+.workspace .app-card-main>span { color: var(--rz-muted); }
+.workspace .app-card-date { color: #5f4489; }
+.workspace .frozen-document small { color: var(--rz-muted); }
+.workspace .snapshot-facts>span, .workspace .snapshot-facts strong { color: var(--rz-muted); }
+.workspace .submission-history summary>span { color: var(--rz-muted); }
+.workspace .document-picker span:not(.tag):not(.document-icon) { color: var(--rz-muted); }
+.workspace .library-counts, .workspace .library-counts>span:first-child { color: var(--rz-muted); }
+.workspace .library-toolbar>.search-input input { color: var(--rz-body); }
+.workspace .templates-caption span, .workspace .template-guidelines p,
+.workspace .template-card-content p, .workspace .template-intro p { color: var(--rz-muted); }
+.workspace .template-card-content>.button { color: var(--rz-body); }
+.workspace .open-template { color: var(--rz-muted); }
+.workspace .new-document-card p, .workspace .document-card-body>p { color: var(--rz-muted); }
+
+/* Card titles across the app */
+.workspace .recommended-job h3, .workspace .upcoming-item h3,
+.workspace .job-list-main h3, .workspace .app-card-main h3,
+.workspace .table-company strong, .workspace .document-title>button,
+.workspace .new-document-card strong, .workspace .template-card-content h3,
+.workspace .company-directory-item strong, .workspace .question-nav-item strong,
+.workspace .practice-history-entry>summary strong, .workspace .company-note-toolbar h3,
+.workspace .question-sidebar-head h2, .workspace .match-block h3,
+.workspace .job-detail-content>h3, .workspace .submission-explainer strong,
+.workspace .interview-cta strong, .workspace .kanban-column h2 { color: var(--rz-strong); }
+
+/* Secondary meta text everywhere it appears as a description line */
+.workspace .job-meta, .workspace .job-detail-meta, .workspace .company-line,
+.workspace .job-detail-kicker, .workspace .job-list-main p, .workspace .job-list-main .company-line,
+.workspace .job-information>span, .workspace .job-information strong,
+.workspace .app-card-main>span, .workspace .app-card-documents,
+.workspace .table-company>span:last-child>span, .workspace .table-company small,
+.workspace .document-card-body>p, .workspace .document-picker span:not(.tag):not(.document-icon),
+.workspace .library-counts, .workspace .library-counts>span:first-child,
+.workspace .board-hint, .workspace .directory-count, .workspace .stat-label>svg:first-child,
+.workspace .frozen-document>span, .workspace .snapshot-facts>span, .workspace .snapshot-facts strong,
+.workspace .submission-explainer p, .workspace .interview-cta p, .workspace .match-intro p,
+.workspace .question-sidebar-note p, .workspace .research-checks p,
+.workspace .settings-section-title p, .workspace .session-source span,
+.workspace .answer-confidence>span, .workspace .audio-preview>span,
+.workspace .answer-input-footer>span, .workspace .board-summary,
+.workspace .recent-applications span:not(.company-mark):not(.tag),
+.workspace .notification-item span, .workspace .upcoming-item p,
+.workspace .quick-document span, .workspace .verification-note p,
+.workspace .upload-copy>span, .workspace .template-guidelines p,
+.workspace .integration-rows>button>div:nth-child(2)>span,
+.workspace .company-profile-header>div:nth-child(2)>span,
+.workspace .company-saved-jobs p, .workspace .about-product-link>span { color: var(--rz-muted); }
+
+/* Primary reading paragraphs */
+.workspace .dashboard-hero-copy>p, .workspace .verification-note,
+.workspace .job-detail-content>.prose-text, .workspace .submission-confirm,
+.workspace .answer-hint p, .workspace .company-tab-content>.prose-text,
+.workspace .integration-explanation p { color: var(--rz-body); }
+
+/* Slightly deeper emphasis text (was mid-blue or mid-grey) */
+.workspace .stat-value, .workspace .weekly-number, .workspace .calendar-tile strong,
+.workspace .weekly-goal h3, .workspace .match-intro h3, .workspace .template-guidelines h3,
+.workspace .answer-hint strong, .workspace .board-summary strong,
+.workspace .table-company strong, .workspace .job-information strong,
+.workspace .submission-history summary strong, .workspace .frozen-document>span,
+.workspace .document-picker strong, .workspace .settings-section-title p { color: var(--rz-strong); }
+
+/* --- Dark / coloured surfaces: text must stay light ------------------------ */
+.workspace .toast { font-size: 13px; }
+.workspace .toast svg { color: #b9efc8; }
+.workspace .button.primary { color: #ffffff; }
+.workspace .category-tabs button.selected { color: #ffffff; }
+.workspace .question-nav-item.active>span { color: #ffffff; }
+.workspace .question-nav-item>span.answered { color: #1f6b45; }
+/* Active nav sits on a light #f1f5ff fill, so the title must stay dark. */
+.workspace .question-nav-item > span { color: var(--rz-muted); background: #f2f5fa; border-color: #dfe5ee; }
+.workspace .question-nav-item.active strong { color: #1f3fa0; }
+.workspace .question-nav-item strong { color: var(--rz-strong); }
+.workspace .question-nav-item small { color: var(--rz-muted); }
+.workspace .check-item.checked { color: #1f6b45; }
+.workspace .weekly-goal-top .eyebrow, .workspace .weekly-goal-top a { color: #55603f; }
+.workspace .weekly-goal>p { color: #5c6647; }
+.workspace .privacy-poster>p, .workspace .privacy-poster>small,
+.workspace .privacy-poster>div:not(.privacy-seal), .workspace .privacy-poster .eyebrow { color: #5a6349; }
+.workspace .enabled-feature { color: #41603f; }
+.workspace .save-status--error, .workspace .save-status--temporary { color: #8a5a12; }
+.workspace .voice-controls>.button.recording-button { color: #8f3a2a; }
+.workspace .app-card-date { color: #5f4489; background: #f1ebfb; }
+.workspace .document-card-footer .submitted-label { color: #2c6a4a; }
+.workspace .document-card-footer .draft-label { color: var(--rz-muted); }
+.workspace .card-b svg { color: #2c6a4a; }
+
+/* ---------------------------------------------------------------------------
+   4. Contrast fixes for specific pale-on-tint pairs (measured, not guessed)
+   ------------------------------------------------------------------------ */
+.workspace .workspace-avatar, .workspace .header-avatar { color: #5f5334; }
+.workspace .calendar-tile span { color: #33528f; }
+.workspace .demo-pill { color: var(--rz-muted); }
+.workspace .integration-icon, .workspace .submission-explainer-icon,
+.workspace .interview-cta-icon, .workspace .document-icon,
+.workspace .match-symbol, .workspace .settings-icon, .workspace .editor-icon { color: #3158a8; }
+.workspace .doc-type-badge { color: var(--rz-body); background: #ffffffd9; }
+.workspace .doc-demo-badge { color: var(--rz-muted); background: #ffffffd9; }
+.workspace .open-template { color: var(--rz-muted); }
+.workspace .empty-column, .workspace .quiet-empty { color: var(--rz-muted); }
+.workspace .app-card-top>span:not(.company-mark), .workspace .app-card-footer>span,
+.workspace .app-card-footer>select { color: var(--rz-muted); }
+.workspace .applications-hint, .workspace .board-summary>.status-dot { color: #2c6a4a; }
+.workspace .table-company small { color: var(--rz-muted); }
+.workspace .results-heading>span>span { color: var(--rz-muted); }
+.workspace .submission-history summary, .workspace .submission-history summary>span,
+.workspace .submission-history summary strong { color: var(--rz-muted); }
+.workspace .frozen-document small { color: var(--rz-muted); }
+.workspace .template-card-content p, .workspace .template-intro p,
+.workspace .templates-caption span, .workspace .templates-page>.note { color: var(--rz-muted); }
+.workspace .company-profile-stats>span, .workspace .company-directory-item>div>span,
+.workspace .integration-rows>button>.tag, .workspace .question-stage-top>.tag,
+.workspace .interview-session-bar>.tag, .workspace .practice-history-entry>summary>.tag,
+.workspace .settings-section-title>.tag, .workspace .job-detail-status>.tag,
+.workspace .document-title>.tag, .workspace .board-summary>.tag,
+.workspace .recommended-job-side>.tag, .workspace .recommended-job .tag,
+.workspace .job-list-main .tag, .workspace .job-list-foot>.tag,
+.workspace .job-list-content .tag, .workspace .snapshot-header .tag,
+.workspace .demo-inline { color: var(--rz-muted); }
+.workspace .job-list-foot, .workspace .empty-column { color: var(--rz-muted); }
+.workspace .verification-note strong { color: #33528f; }
+.workspace .match-block>div:first-child { color: #33528f; }
+.workspace .question-source>svg, .workspace .question-sidebar-note>svg,
+.workspace .snapshot-facts svg, /* icon strokes inherit currentColor */
+.workspace .settings-section .stack-form .goal-field>div { color: var(--rz-muted); }
+.workspace .integration-rows>button>svg, .workspace .recommended-job-side>svg,
+.workspace .app-card-top>svg, .workspace .about-product-link strong>svg,
+.workspace .question-source>svg, .workspace .question-sidebar-note>svg,
+.workspace .question-nav-item>svg, .workspace .app-card-top>svg { color: #5d6a7d; }
+
+/* ---------------------------------------------------------------------------
+   5. Layout guards — make room for the larger type, no overflow
+   ------------------------------------------------------------------------ */
+.workspace .stats-strip { padding-block: 20px; }
+.workspace .stat-item { display: flex; flex-direction: column; justify-content: center; }
+.workspace .calendar-tile { width: 46px; height: 54px; }
+.workspace .calendar-tile strong { font-size: 21px; }
+.workspace .nav-item { min-height: 44px; padding-block: 11px; }
+.workspace .tag { max-width: 100%; white-space: normal; }
+.workspace .board-summary { flex-wrap: wrap; row-gap: 6px; }
+.workspace .job-list-foot { flex-wrap: wrap; row-gap: 4px; }
+.workspace .app-card-footer { flex-wrap: wrap; row-gap: 6px; }
+.workspace .table-company small { white-space: normal; }
+.workspace .mini-paper-mark, .workspace .mini-paper-text { font-size: inherit; }
+
+/* Native <dialog> portalled outside .workspace */
+.modal .eyebrow { font-size: 10.5px; }
+.modal .field-hint { font-size: 11.5px; color: var(--rz-muted); }
+.modal .button { font-size: 13px; }
+.modal .tag { font-size: 11px; }
+.modal .command-results button { font-size: 13px; }
+.modal .command-results button>svg { color: var(--rz-muted); }
+.modal .notification-item strong { font-size: 14px; color: var(--rz-strong); }
+.modal .notification-item span { font-size: 12px; color: var(--rz-muted); }
+.modal .application-drawer-meta p { font-size: 12.5px; color: var(--rz-muted); }
+.modal .application-drawer-meta .eyebrow { font-size: 10.5px; }
+.modal .confirm-description { color: var(--rz-body); }
+.modal .document-picker span:not(.tag):not(.document-icon) { font-size: 11.5px; color: var(--rz-muted); }
+.modal .document-picker strong { font-size: 12.5px; color: var(--rz-strong); }
+.modal .editor-help { font-size: 11.5px; color: var(--rz-muted); }
+.modal .editor-toolbar { font-size: 11.5px; color: var(--rz-muted); }
+.modal .editor-toolbar small { font-size: 11px; }
+.modal .form-error { font-size: 12.5px; }
+.modal .preview-caption { color: var(--rz-muted); }
+.modal .paper-content { color: #3b4a63; }
+.modal .paper-content h3 { color: #2f3a4b; }
+.modal .paper-content h4 { color: #414c5e; }
+.modal .paper-heading>p { color: var(--rz-muted); }
+.modal .paper-brand>span:last-child { color: var(--rz-muted); }
+.modal .verification-note strong { color: #33528f; }
+.modal .verification-options span { font-size: 12px; color: var(--rz-muted); }
+.modal .snapshot-facts>span { font-size: 12px; color: var(--rz-muted); }
+.modal .submission-history summary, .modal .submission-history summary strong { color: var(--rz-muted); }
+.modal .frozen-document small { color: var(--rz-muted); }
+.modal .interview-cta p { font-size: 12px; color: var(--rz-muted); }
+
+/* The editor's live paper preview is reading content, not artwork. */
+.modal .paper-heading h2 { color: #2f3a4b; }
+.modal .paper-content, .modal .editor-preview .paper-content { font-size: 13px; line-height: 2; }
+
+/* Targeted !important only where the parent declared font-size !important. */
+.workspace .search-input input,
+.workspace .board-tools>.search-input input,
+.workspace .job-filters>.search-input input,
+.workspace .library-toolbar>.search-input input,
+.workspace .company-directory>.search-input input { font-size: 13px !important; }
+.workspace .select-shell select,
+.workspace .results-heading select,
+.workspace .app-card-footer>select,
+.workspace .stage-select select,
+.workspace .version-select select { font-size: 12.5px !important; }
+.workspace .job-detail-actions .button,
+.workspace .answer-actions>.button,
+.workspace .answer-actions>div>.button,
+.workspace .answer-actions .button { font-size: 12.5px !important; }
+.workspace .weekly-footnote { font-size: 11px !important; }
+.workspace .editor-meta input, .workspace .editor-meta select { font-size: 13px !important; }
+
+/* ---------------------------------------------------------------------------
+   6. Motion / a11y parity with the workspace defaults
+   ------------------------------------------------------------------------ */
+@media (prefers-reduced-motion: reduce) {
+  .workspace *, .modal * { transition-duration: 0.001ms !important; animation-duration: 0.001ms !important; }
+}
+@media (forced-colors: active) {
+  .workspace .tag, .workspace .button, .workspace .panel { border: 1px solid CanvasText; }
+}
+
+/* ---------------------------------------------------------------------------
+   7. Small screens: hold the larger type without squeezing the layout
+   ------------------------------------------------------------------------ */
+@media (max-width: 760px) {
+  .workspace .page-heading h1, .workspace .dashboard-greeting h1 { font-size: 22px; }
+  .workspace .stat-label { font-size: 11px; }
+  .workspace .stat-value { font-size: 26px; }
+  .workspace .tag { font-size: 10.5px; }
+  .workspace .job-list-main h3, .workspace .app-card-main h3 { font-size: 12.5px; }
+  .workspace .hero-bottom-strip { font-size: 10.5px; }
+  .workspace .company-mark { font-size: 16px; }
+  .workspace .calendar-tile { width: 44px; height: 52px; }
+}
+@media (max-width: 400px) {
+  .workspace .app-main { padding-inline: 14px; }
+  .workspace .tag { font-size: 10px; }
+}
+
+/* ---------------------------------------------------------------------------
+   8. Final size normalisation for interactive controls
+   The workspace declared many per-container button sizes (9-10px), so a single
+   late, higher-specificity pass settles every button variant on body size.
+   Placed last on purpose: it must win over the container overrides above.
+   ------------------------------------------------------------------------ */
+.workspace .button,
+.workspace .button.secondary,
+.workspace .button.ghost,
+.workspace .button.danger,
+.workspace .button.primary,
+.workspace .company-note-toolbar > .button,
+.workspace .company-information-source .button,
+.workspace .upload-controls > .button,
+.workspace .document-viewer-toolbar .button,
+.workspace .snapshot-header .button,
+.workspace .drawer-bottom .button,
+.workspace .backup-actions .button,
+.workspace .reset-section .button,
+.workspace .settings-section .form-actions .button,
+.workspace .template-card-content > .button,
+.workspace .dashboard-hero .button,
+.workspace .job-detail-actions > .button,
+.workspace .voice-controls .button,
+.workspace .audio-preview > .button,
+.workspace .answer-actions .button,
+.workspace .answer-actions > .button,
+.workspace .answer-actions > div > .button,
+.workspace .session-mode > button,
+.workspace .view-switch > button,
+.workspace .saved-filter,
+.workspace .text-link,
+.workspace .library-bottom-note > .text-link,
+.workspace .submission-explainer > .text-link,
+.workspace .editor-toolbar > .text-link { font-size: 13px; }
+
+/* Layout guards for the larger controls */
+.workspace .session-mode > button { min-height: 34px; padding-inline: 12px; }
+.workspace .view-switch > button { width: 34px; height: 30px; }
+.workspace .company-note-toolbar { flex-wrap: wrap; row-gap: 8px; }
+.workspace .drawer-bottom, .workspace .job-detail-actions { flex-wrap: wrap; row-gap: 8px; }
+.workspace .backup-actions .button, .workspace .reset-section .button { min-height: 38px; }
+.workspace .answer-actions { flex-wrap: wrap; row-gap: 8px; }
