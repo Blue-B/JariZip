@@ -66,12 +66,21 @@ test('a failed source is visible without hiding successful source results', asyn
   await expect(page.locator('.discover-error')).toHaveCount(0);
 });
 
-for (const source of ['jumpit', 'zighang']) test(`${source} detail, save and immutable application snapshot use the correct source`, async ({ page }) => {
+for (const source of ['jumpit', 'zighang']) test(`${source} detail, save and immutable application snapshot use the correct source`, async ({ page }, testInfo) => {
   await mockSources(page);
   await page.goto('/#/app/discover');
   const title = source === 'jumpit' ? '점핏' : '직행';
   await page.locator('.discover-job').filter({ has: page.locator('.discover-source-label', { hasText: title }) }).click();
   await expect(page.getByRole('dialog')).toContainText('브라우저 자동시험 전용');
+  // The drawer lives in a body portal, not inside .workspace.
+  await expect(page.locator('.discover-company-detail')).toHaveCSS('display', 'flex');
+  await expect(page.locator('.discover-facts')).toHaveCSS('display', 'grid');
+  await expect(page.locator('.discover-detail-actions')).toHaveCSS('display', 'flex');
+  for (const width of [1440, 360]) {
+    await page.setViewportSize({ width, height: 1000 });
+    await expect.poll(() => page.getByRole('dialog').evaluate(el => el.scrollWidth <= el.clientWidth + 1)).toBe(true);
+    await page.screenshot({ path: testInfo.outputPath(`detail-${width}.png`), animations: 'disabled' });
+  }
   await page.getByRole('button', { name: '지원 준비하기', exact: true }).click();
   await expect(page).toHaveURL(/#\/app\/applications\?application=/);
   await expect(page.locator('.save-status')).toHaveText('저장됨');

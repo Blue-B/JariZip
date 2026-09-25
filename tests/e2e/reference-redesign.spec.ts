@@ -50,7 +50,7 @@ test('character tips, sorting controls and whitespace remain usable on desktop a
     await page.setViewportSize({ width, height: 1000 });
     await page.goto('/#/app/discover');
     await expect(page.locator('.discover-job')).toHaveCount(2);
-    const guide = page.getByRole('button', { name: '지피의 탐색 팁', exact: true });
+    const guide = page.getByRole('button', { name: '탐색 도움말', exact: true });
     await guide.focus();
     await page.keyboard.press('Enter');
     await expect(guide).toHaveAttribute('aria-expanded', 'true');
@@ -66,25 +66,15 @@ test('character tips, sorting controls and whitespace remain usable on desktop a
   }
 });
 
-test('landing story reacts to keyboard and pointer without changing navigation destinations', async ({ page }, testInfo) => {
-  await page.emulateMedia({ reducedMotion: 'no-preference' });
-  await page.setViewportSize({ width: 1440, height: 1000 });
-  await page.emulateMedia({ reducedMotion: 'no-preference' });
-  await page.goto('/#/');
-  await page.locator('.lz-step-heading button').nth(1).focus();
-  await page.keyboard.press('Enter');
-  await expect(page.locator('.lz-flow-caption')).toHaveText('02 / 서류 준비');
-  await expect(page.locator('.lz-steps a').nth(1)).toHaveAttribute('href', '#/app/documents');
-  await page.locator('.lz-step').nth(3).hover();
-  await expect(page.locator('.lz-flow-caption')).toHaveText('04 / 면접 연습');
-  await page.evaluate(() => scrollTo(0, 0));
-  await page.locator('.lz-hero-visual').hover({ position: { x: 40, y: 50 } });
-  await expect.poll(() => page.locator('.lz-hero-visual').evaluate(el => el.style.getPropertyValue('--aim-x'))).not.toBe('0deg');
-  await page.getByRole('button', { name: '캐릭터 움직임 멈추기', exact: true }).click();
-  await expect.poll(() => page.locator('.lz-hero-visual').evaluate(el => el.style.getPropertyValue('--aim-x'))).toBe('0deg');
-  for (const width of [1440, 390, 360]) {
+test('optional guide stays compact, readable and keyboard-navigable', async ({ page }, testInfo) => {
+  await page.goto('/#/about');
+  await expect(page.locator('.lz-guide-spaces a').nth(1)).toHaveAttribute('href', '#/app/documents');
+  for (const width of [1440, 390, 360, 320]) {
     await page.setViewportSize({ width, height: 1000 });
     await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
-    await page.screenshot({ path: testInfo.outputPath(`landing-${width}.png`), fullPage: true, animations: 'disabled' });
+    await page.screenshot({ path: testInfo.outputPath(`guide-${width}.png`), fullPage: true, animations: 'disabled' });
   }
+  await page.locator('.lz-guide-spaces a').nth(1).focus();
+  await page.keyboard.press('Enter');
+  await expect(page).toHaveURL(/#\/app\/documents$/);
 });

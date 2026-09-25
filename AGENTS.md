@@ -3,7 +3,7 @@
 Read README.md before changing product behavior.
 
 ## Product boundaries
-- JariZip is a Korean local-first career workspace with a character-led landing page and a readable working app.
+- JariZip is a Korean local-first career workspace. Home opens job discovery directly; /about is optional concise help, never a marketing gate.
 - Every bundled person, company, posting, document and application is fictional. Never add a real person's resume, application history, credentials or private data to fixtures, screenshots, issues or source control.
 - Do not label demo listings as verified live jobs. A manually imported job starts unverified. Display manual checks with their date; never treat HTTP availability as evidence of active hiring.
 - Current interview questions and skill comparisons are deterministic local rules, not LLM evaluations or hiring probabilities. Unconnected integrations must remain honestly labeled.
@@ -17,7 +17,7 @@ Read README.md before changing product behavior.
 - Keep browser data, generated builds, screenshots from test failures and local runtime processes out of source control.
 
 ## Interface and accessibility
-- Public page: deep navy, electric cobalt, restrained cyan and original Jippi artwork. Working app: white, ink, clear rules and a restrained blue accent. No gradients, fake testimonials, match percentages or popularity metrics.
+- Use light blue-gray backgrounds, white working surfaces, readable charcoal text and a restrained desaturated blue accent. No dark sidebar, saturated hero blocks, oversized slogans or decorative motion. Keep original Jippi artwork small and optional. No gradients, fake testimonials, match percentages or popularity metrics.
 - Keep landing styles scoped to `.lz-` and working-app styles separate.
 - Preserve mobile layouts, native keyboard-operable dialogs, visible focus and reduced-motion support. Recording must stop on navigation.
 - Font assets should come from installed packages, not external font requests.

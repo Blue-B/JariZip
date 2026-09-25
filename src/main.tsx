@@ -1,6 +1,6 @@
 import React, { Suspense, lazy } from 'react';
 import ReactDOM from 'react-dom/client';
-import { HashRouter, Routes, Route, Link } from 'react-router-dom';
+import { HashRouter, Routes, Route, Link, Navigate } from 'react-router-dom';
 import 'pretendard/dist/web/variable/pretendardvariable-dynamic-subset.css';
 import './styles/global.css';
 import './styles/typography.css';
@@ -19,5 +19,5 @@ class ErrorBoundary extends React.Component<React.PropsWithChildren, { failed: b
 function NotFound() { return <main className="recovery-screen"><p className="eyebrow">404 / LOST & FOUND</p><h1>이 자리는 비어 있어요.</h1><Link className="button primary" to="/app">내 공간으로 돌아가기</Link></main>; }
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
-  <React.StrictMode><ErrorBoundary><HashRouter><Suspense fallback={<div className="recovery-screen" role="status"><div className="loading-mark"/><p>내 다음 자리를 여는 중</p></div>}><Routes><Route path="/" element={<Landing />} /><Route path="/app/*" element={<Workspace />} /><Route path="*" element={<NotFound />} /></Routes></Suspense></HashRouter></ErrorBoundary></React.StrictMode>,
+  <React.StrictMode><ErrorBoundary><HashRouter><Suspense fallback={<div className="recovery-screen" role="status"><div className="loading-mark"/><p>화면을 불러오고 있어요.</p></div>}><Routes><Route path="/" element={<Navigate to="/app/discover" replace />} /><Route path="/about" element={<Landing />} /><Route path="/app/*" element={<Workspace />} /><Route path="*" element={<NotFound />} /></Routes></Suspense></HashRouter></ErrorBoundary></React.StrictMode>,
 );

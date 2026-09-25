@@ -1,19 +1,21 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures';
 
-test('footer opens the promised workspace and scrolls without replacing the app route', async ({ page }) => {
-  await page.goto('/#/', { waitUntil: 'networkidle' });
-  await page.locator('footer').getByRole('link', { name: '서류 보관함', exact: true }).click();
-  await expect(page).toHaveURL(/#\/app\/documents$/);
+test('home, optional help and browser Back return to useful content', async ({ page }) => {
+  await page.goto('/#/app/documents');
   await expect(page.locator('h1')).toHaveText('내 이야기가 쌓이는 서랍');
-  await page.goto('/#/', { waitUntil: 'networkidle' });
-  await page.locator('footer').getByRole('link', { name: '지원 현황', exact: true }).click();
-  await expect(page).toHaveURL(/#\/app\/applications$/);
-  await expect(page.locator('h1')).toHaveText('모든 지원에, 나만의 흐름');
-  await page.goto('/#/', { waitUntil: 'networkidle' });
-  const landingURL = page.url();
-  for (const [name, target] of [['이용 흐름', '#flow'], ['한계와 원칙', '#limits'], ['자주 묻는 질문', '#faq']]) {
-    await page.locator('footer').getByRole('button', { name, exact: true }).click();
-    await expect(page).toHaveURL(landingURL);
-    await expect(page.locator(target)).toBeInViewport();
-  }
+  const documentsBefore = await page.locator('.document-card').count();
+  await page.getByRole('link', { name: '자리집 JariZip 홈', exact: true }).click();
+  await expect(page).toHaveURL(/#\/app\/discover$/);
+  // The root redirect replaces history rather than creating a Back-button trap.
+  await page.goBack();
+  await expect(page).toHaveURL(/#\/app\/documents$/);
+  await expect(page.locator('.document-card')).toHaveCount(documentsBefore);
+  await page.locator('.sidebar-help').click();
+  await expect(page).toHaveURL(/#\/about$/);
+  await expect(page.getByRole('heading', { name: '이용 안내', exact: true })).toBeVisible();
+  await page.getByRole('link', { name: '공고로 돌아가기', exact: true }).click();
+  await expect(page).toHaveURL(/#\/app\/discover$/);
+  await page.goto('/#/about');
+  await page.locator('footer').getByRole('link', { name: '채용 공고 보기' }).click();
+  await expect(page).toHaveURL(/#\/app\/discover$/);
 });

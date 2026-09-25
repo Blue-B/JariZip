@@ -20,14 +20,16 @@ async function downloadBytes(download: Download): Promise<Buffer> {
   return Buffer.concat(chunks);
 }
 
-test('landing navigation, character reaction and keyboard search work', async ({ page }) => {
+test('direct home, optional discovery help and keyboard search work', async ({ page }) => {
   const errors: string[] = [];
   page.on('pageerror', error => errors.push(error.message));
   await open(page, '');
-  const mascot = page.getByRole('button', { name: '마스코트 지피와 인사하기', exact: true }).first();
-  await expect(mascot).toBeVisible();
-  await mascot.click();
-  await expect(page.locator('.lz-mascot-bubble').first()).toBeVisible();
+  await expect(page).toHaveURL(/#\/app\/discover$/);
+  const help = page.getByRole('button', { name: '탐색 도움말', exact: true });
+  await help.click();
+  await expect(page.locator('.discover-tip')).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(help).toBeFocused();
   await page.locator('a[href="#/app"]').first().click();
   await expect(page.locator('h1')).toBeVisible();
   await expect(page.locator('.save-status')).toHaveText('저장됨');

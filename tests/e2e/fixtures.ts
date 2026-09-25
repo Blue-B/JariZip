@@ -14,7 +14,13 @@ export const test = base.extend<{ seededWorkspace: void }>({
       ...application, isDemo: false,
       jobSnapshot: { ...application.jobSnapshot, isDemo: false },
     }));
-    await page.goto('/#/', { waitUntil: 'networkidle' });
+    // Seed on the optional guide, before the workspace mounts or searches.
+    await page.route('**/api/sources', route => route.fulfill({ json: { sources: [] } }));
+    await page.route('**/api/jobs?**', route => route.fulfill({ json: {
+      jobs: [], checkedAt: '2026-09-26T00:00:00.000Z', nextCursor: null,
+      nextPage: null, warnings: [], sourceResults: [],
+    } }));
+    await page.goto('/#/about', { waitUntil: 'networkidle' });
     await page.evaluate(async state => {
       await new Promise<void>((resolve, reject) => {
         const request = indexedDB.open('keyval-store', 1);

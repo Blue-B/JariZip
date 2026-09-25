@@ -22,7 +22,7 @@ test('local character artwork decodes and every screen remains readable at deskt
   const errors: string[] = [];
   page.on('pageerror', error => errors.push(error.message));
   for (const [name, route] of [
-    ['landing', '/'], ['dashboard', '/app'], ['jobs', '/app/jobs'],
+    ['home', '/'], ['guide', '/about'], ['dashboard', '/app'], ['jobs', '/app/jobs'],
     ['applications', '/app/applications'], ['documents', '/app/documents'],
     ['interview', '/app/interview'], ['companies', '/app/companies'],
     ['templates', '/app/templates'], ['settings', '/app/settings'],

@@ -153,11 +153,11 @@ export default function DiscoverJobs() {
   const filters = [applied.query ? `“${applied.query}”` : '', applied.location !== 'all' ? jobLocations.find(item => item.id === applied.location)?.name : '', applied.category !== 'all' ? jobCategories.find(item => item.id === applied.category)?.name : '', applied.experience !== 'all' ? jobExperiences.find(item => item.id === applied.experience)?.name : ''].filter(Boolean);
   return <div className="discover-page page-enter">
     <header className="discover-heading">
-      <div><p className="discover-eyebrow">JARIZIP / EXPLORE</p><h1>채용 공고<span className="discover-title-dot" aria-hidden="true">.</span></h1><p>다음 자리는, 생각보다 가까이.</p></div>
+      <div><h1>채용 공고</h1></div>
       <div className="discover-heading-aside"><JippiGuide/><Link className="button secondary" to="/app/jobs"><Bookmark size={16}/>보관한 공고</Link></div>
     </header>
     <form className="discover-search" onSubmit={submit}>
-      <div className="discover-search-row"><label className="discover-query"><Search size={21}/><span className="sr-only">실제 공고 검색어</span><input value={query} maxLength={120} onChange={event => setQuery(event.target.value)} placeholder="어떤 일을 찾고 있나요? 직무, 기술, 회사 이름"/></label><Button type="submit" variant="primary" disabled={loading}>공고 찾기<ArrowRight size={17}/></Button></div>
+      <div className="discover-search-row"><label className="discover-query"><Search size={21}/><span className="sr-only">실제 공고 검색어</span><input value={query} maxLength={120} onChange={event => setQuery(event.target.value)} placeholder="직무, 기술, 회사 이름 검색"/></label><Button type="submit" variant="primary" disabled={loading}>공고 찾기<ArrowRight size={17}/></Button></div>
       <div className="discover-filter-grid">
         <label><span>공고 출처</span><select value={source} onChange={event => setSource(event.target.value as SearchSource)}><option value="all">모든 연결 출처</option>{sources.map(item => <option key={item.id} value={item.id} disabled={!item.enabled}>{item.name}{item.enabled ? '' : ' · API 키 필요'}</option>)}</select></label>
         <label><span>공고 근무 지역</span><select value={location} onChange={event => setLocation(event.target.value)}>{jobLocations.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
@@ -166,7 +166,7 @@ export default function DiscoverJobs() {
       </div>
     </form>
     <div ref={listHeading} className="discover-results-heading">
-      <div><h2>{filters.length ? '조건에 맞는 자리' : '새로운 채용 소식'}</h2>{filters.length > 0 && <p className="discover-active-filters">{filters.join(' · ')}</p>}</div>
+      <div><h2>{filters.length ? '검색 결과' : '채용 목록'}</h2>{filters.length > 0 && <p className="discover-active-filters">{filters.join(' · ')}</p>}</div>
       <div className="discover-result-actions"><Button variant="ghost" disabled={loading} onClick={resetSearch}>조건 초기화</Button><Button variant="ghost" disabled={loading} onClick={() => { resetView(); setApplied(value => ({ ...value, revision: value.revision + 1 })); }}><RefreshCw size={15}/>다시 조회</Button></div>
     </div>
     <div className="discover-feed-controls">

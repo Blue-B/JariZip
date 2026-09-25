@@ -18,19 +18,24 @@ test('mobile search has a name and save notifications leave bottom navigation cl
   await expect(page).toHaveURL(/#\/app\/documents$/);
 });
 
-test('mobile character greeting stays anchored to Jippi rather than the preview frame', async ({ page }) => {
-  await page.setViewportSize({ width: 390, height: 844 });
-  await page.goto('/#/', { waitUntil: 'networkidle' });
-  await page.getByRole('button', { name: '마스코트 지피와 인사하기', exact: true }).click();
-  const bubble = page.locator('.lz-mascot-bubble');
+test('small mobile help stays inside the viewport and restores focus when dismissed', async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 844 });
+  await page.goto('/#/');
+  const help = page.getByRole('button', { name: '탐색 도움말', exact: true });
+  await help.click();
+  const bubble = page.locator('.discover-tip');
   await expect(bubble).toBeVisible();
-  const bubbleBox = await bubble.boundingBox();
-  const character = await page.locator('.lz-jippi-stand').boundingBox();
-  expect(bubbleBox).not.toBeNull();
-  expect(character).not.toBeNull();
-  const gap = character!.y - (bubbleBox!.y + bubbleBox!.height);
-  expect(gap).toBeGreaterThanOrEqual(0);
-  expect(gap).toBeLessThan(20);
-  expect(bubbleBox!.x).toBeGreaterThanOrEqual(0);
-  expect(bubbleBox!.x + bubbleBox!.width).toBeLessThanOrEqual(390);
+  const box = await bubble.boundingBox();
+  expect(box).not.toBeNull();
+  expect(box!.x).toBeGreaterThanOrEqual(0);
+  expect(box!.x + box!.width).toBeLessThanOrEqual(320);
+  await page.getByRole('button', { name: '탐색 팁 닫기' }).click();
+  await expect(help).toBeFocused();
+  await expect(bubble).toBeHidden();
+  await help.click();
+  await page.keyboard.press('Escape');
+  await expect(bubble).toBeHidden();
+  await expect(help).toBeFocused();
+  await page.getByRole('textbox', { name: '실제 공고 검색어' }).click();
+  await expect(page.getByRole('textbox', { name: '실제 공고 검색어' })).toBeFocused();
 });
