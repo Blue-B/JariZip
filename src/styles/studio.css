@@ -31,24 +31,24 @@
    ------------------------------------------------------------------------ */
 .workspace,
 .modal {
-  --st-paper: #f6f3eb;
-  --st-paper-deep: #efeade;
-  --st-card: #fffdf9;
-  --st-sage: #e9ecdf;
-  --st-sage-deep: #dde2cf;
-  --st-ink: #202723;
-  --st-strong: #29332c;
-  --st-body: #3d4a43;
-  --st-muted: #5c6a62;
-  --st-faint: #7b877f;
-  --st-forest: #244c3f;
-  --st-forest-deep: #1b3a30;
-  --st-forest-soft: #e4ece4;
-  --st-orange: #a8542a;
-  --st-orange-deep: #8d431e;
-  --st-orange-soft: #f7e8dd;
-  --st-line: #ded7c7;
-  --st-line-soft: #ebe5d7;
+  --st-paper: #ffffff;
+  --st-paper-deep: #f5f7fa;
+  --st-card: #ffffff;
+  --st-sage: #f6f8fb;
+  --st-sage-deep: #e0e5ec;
+  --st-ink: #111b2b;
+  --st-strong: #1d2939;
+  --st-body: #3a4655;
+  --st-muted: #626d7c;
+  --st-faint: #76808c;
+  --st-forest: #2536f4;
+  --st-forest-deep: #1524c2;
+  --st-forest-soft: #eef1ff;
+  --st-orange: #b7472a;
+  --st-orange-deep: #9b321b;
+  --st-orange-soft: #fff1eb;
+  --st-line: #dce1e7;
+  --st-line-soft: #edf0f4;
   --st-r-sm: 8px;
   --st-r: 10px;
   --st-r-lg: 12px;
@@ -780,9 +780,42 @@
   .workspace .topbar-search kbd { margin-left: 6px; }
 }
 
-/* ---------------------------------------------------------------------------
-   12. Reduced motion — the refresh adds no motion of its own
-   ------------------------------------------------------------------------ */
+/* Neutral working canvas, with navigation matching the public page. Legacy
+   token names above remain aliases so existing feature sheets stay compatible. */
+.workspace .sidebar { background:#071b29; border-right:1px solid #203443; }
+.workspace .sidebar .wordmark-ko { color:#fff; }
+.workspace .sidebar .wordmark-latin { color:#e0ebf2; }
+.workspace .sidebar .brand-period { color:#36c9f6; }
+.workspace .sidebar .workspace-switch { background:#102b3c; border-color:#244252; }
+.workspace .sidebar .workspace-switch strong { color:#f0f6fa; }
+.workspace .sidebar .workspace-switch span { color:#a7beca; }
+.workspace .sidebar .workspace-avatar { color:#fff; background:#2536f4; }
+.workspace .sidebar .nav-caption { color:#91a6b6; font-weight:500; letter-spacing:.02em; }
+.workspace .sidebar .nav-item { color:#becdda; border-radius:6px; font-weight:500; }
+.workspace .sidebar .nav-item>svg { color:#8fa8ba; }
+.workspace .sidebar .nav-item:hover { background:#123044; color:#fff; }
+.workspace .sidebar .nav-item.active { background:#2536f4; color:#fff; }
+.workspace .sidebar .nav-item.active>svg,.workspace .sidebar .nav-item:hover>svg { color:#fff; }
+.workspace .sidebar .nav-item:focus-visible { outline-color:#36c9f6; outline-offset:2px; }
+.workspace .sidebar .nav-count { background:#ffffff20; color:#e9f2f8; }
+.workspace .sidebar .nav-divider::before { background:#244252; }
+.workspace .sidebar .jippi-tip,.workspace .sidebar .privacy-card,.workspace .sidebar .sidebar-github { border-color:#244252; }
+.workspace .sidebar .jippi-tip strong,.workspace .sidebar .privacy-card strong { color:#e8f1f8; }
+.workspace .sidebar .jippi-tip p,.workspace .sidebar .privacy-card p { color:#9eb4c4; }
+.workspace .sidebar .jippi-tip a,.workspace .sidebar .privacy-card a { color:#71daf8; }
+.workspace .sidebar .sidebar-github { color:#9eb4c4; }
+.workspace .sidebar .privacy-card p { display:none; }
+.workspace .topbar { background:#fff; backdrop-filter:none; border-color:#e8ecf1; }
+.workspace .topbar-search { background:#f5f7fa; border-color:transparent; }
+.workspace .topbar-search:hover { border-color:#b9c7dc; }
+.workspace .page-heading h1,.workspace .dashboard-greeting h1 { font-size:clamp(26px,2.5vw,34px); letter-spacing:-1.2px; }
+.workspace .mobile-bottom-nav { background:#fff; border-top-color:#dce1e7; }
+.workspace .note--blue,.workspace .tag--blue { background:#eef1ff; color:#2536bf; }
+.workspace .company-mark { background:#f0f3f8; color:#25354b; }
+.workspace input:focus,.workspace textarea:focus,.workspace select:focus,.modal input:focus,.modal textarea:focus,.modal select:focus { border-color:#2536f4!important; box-shadow:0 0 0 3px #2536f410; }
+.workspace ::selection,.modal ::selection { background:#cceffc; color:#071b29; }
+
+/* Reduced-motion preferences apply to every working surface. */
 @media (prefers-reduced-motion: reduce) {
   .workspace *,
   .workspace *::before,

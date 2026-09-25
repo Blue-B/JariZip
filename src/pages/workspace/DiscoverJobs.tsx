@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { ArrowRight, ArrowUpRight, Search, RefreshCw, Bookmark, MapPin, AlertCircle, ChevronLeft, ChevronRight, Building2 } from 'lucide-react';
 import { useWorkspace } from '../../lib/store';
@@ -8,9 +8,10 @@ import { fetchSources, refreshRemoteJob, upsertRemoteJob, type SearchSource, typ
 import { jobLocations, jobCategories, jobExperiences } from '../../lib/jobFilters';
 import { useJobFeed } from '../../lib/useJobFeed';
 import { jobDeadline } from '../../lib/jobDeadline';
+import { sortJobs, type JobSort } from '../../lib/jobSort';
 import type { Job } from '../../lib/types';
 import { Button, CompanyMark, EmptyState, ExternalJobLink, JobBadge, Modal, Tag } from '../../components/ui';
-import JippiArt from '../../components/JippiArt';
+import JippiGuide from '../../components/JippiGuide';
 import '../../styles/discover.css';
 
 const timeLabel = (value: string) => new Date(value).toLocaleString('ko-KR', { timeZone: 'Asia/Seoul', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
@@ -28,6 +29,7 @@ export default function DiscoverJobs() {
   const [applied, setApplied] = useState(initialSearch);
   const { result, readyForFilters, loading, loadingMore, error, moreError, hasMore, canAutoLoad, loadThrough } = useJobFeed(applied);
   const [pageSize, setPageSize] = useState(30);
+  const [order, setOrder] = useState<JobSort>('source');
   const [pageIndex, setPageIndex] = useState(0);
   const [visibleLimit, setVisibleLimit] = useState(30);
   const [autoLoad, setAutoLoad] = useState(false);
@@ -145,14 +147,14 @@ export default function DiscoverJobs() {
   }
 
   const isSaved = (job: Job) => state.jobs.some(item => canonicalJobUrl(item.sourceUrl) === canonicalJobUrl(job.sourceUrl));
-  const jobs = result?.jobs ?? [];
+  const jobs = useMemo(() => sortJobs(result?.jobs ?? [], order, clock), [result?.jobs, order, clock]);
   const visibleJobs = autoLoad ? jobs.slice(0, visibleLimit) : jobs.slice(pageIndex * pageSize, (pageIndex + 1) * pageSize);
   const failures = result?.sourceResults.filter(item => item.status === 'error') ?? [];
   const filters = [applied.query ? `“${applied.query}”` : '', applied.location !== 'all' ? jobLocations.find(item => item.id === applied.location)?.name : '', applied.category !== 'all' ? jobCategories.find(item => item.id === applied.category)?.name : '', applied.experience !== 'all' ? jobExperiences.find(item => item.id === applied.experience)?.name : ''].filter(Boolean);
   return <div className="discover-page page-enter">
     <header className="discover-heading">
-      <div><p className="discover-eyebrow">나의 다음 자리를 찾는 곳</p><h1>채용 공고</h1><p>회사와 조건을 살펴보고, 마음에 드는 자리를 모아두세요.</p></div>
-      <div className="discover-heading-aside"><span className="discover-jippi"><JippiArt pose="document" alt="서류를 든 지피"/></span><Link className="button secondary" to="/app/jobs"><Bookmark size={16}/>보관한 공고</Link></div>
+      <div><p className="discover-eyebrow">JARIZIP / EXPLORE</p><h1>채용 공고<span className="discover-title-dot" aria-hidden="true">.</span></h1><p>다음 자리는, 생각보다 가까이.</p></div>
+      <div className="discover-heading-aside"><JippiGuide/><Link className="button secondary" to="/app/jobs"><Bookmark size={16}/>보관한 공고</Link></div>
     </header>
     <form className="discover-search" onSubmit={submit}>
       <div className="discover-search-row"><label className="discover-query"><Search size={21}/><span className="sr-only">실제 공고 검색어</span><input value={query} maxLength={120} onChange={event => setQuery(event.target.value)} placeholder="어떤 일을 찾고 있나요? 직무, 기술, 회사 이름"/></label><Button type="submit" variant="primary" disabled={loading}>공고 찾기<ArrowRight size={17}/></Button></div>
@@ -169,8 +171,10 @@ export default function DiscoverJobs() {
     </div>
     <div className="discover-feed-controls">
       <label className="discover-auto-toggle"><input type="checkbox" checked={autoLoad} onChange={event => changeMode(event.target.checked)}/>스크롤할 때 자동으로 더 보기</label>
+      <label className="discover-order"><span className="sr-only">공고 정렬</span><select value={order} onChange={event => { setOrder(event.target.value as JobSort); resetView(); }}><option value="source">출처 기본순</option><option value="deadline">마감일 가까운 순</option><option value="newest">게시일 최신순</option></select></label>
       <label className="discover-page-size"><span className="sr-only">한 번에 볼 공고 수</span><select value={pageSize} onChange={event => { const size = Number(event.target.value); setPageSize(size); resetView(size); }}><option value={30}>30개씩 보기</option><option value={50}>50개씩 보기</option></select></label>
     </div>
+    {order !== 'source' && <p className="discover-sort-note">불러온 공고 안에서 정렬해요. 날짜 미공개는 뒤에 표시하며, 더 불러오면 순서가 바뀔 수 있어요.</p>}
     {failures.length > 0 && <details className="discover-source-warning"><summary><AlertCircle size={16}/>일부 출처의 연결을 확인하지 못했어요</summary>{failures.map(item => <p key={item.id}>{item.name}: {item.message || '잠시 후 다시 조회해주세요.'}</p>)}<p>다른 출처에서 불러온 공고는 계속 볼 수 있어요.</p></details>}
     {error && <div className="discover-error" role="alert"><AlertCircle size={20}/><div><h2>공고를 가져오지 못했어요</h2><p>{error}</p><p>가상 공고로 대신 채우지 않아요. 보관한 자료는 그대로 사용할 수 있어요.</p><Link to="/app/jobs">내 보관함 열기<ArrowRight size={14}/></Link></div></div>}
     {loading && <div className="discover-loading" role="status"><RefreshCw size={21}/>채용 소식을 불러오고 있어요.</div>}

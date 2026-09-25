@@ -17,7 +17,7 @@ Read README.md before changing product behavior.
 - Keep browser data, generated builds, screenshots from test failures and local runtime processes out of source control.
 
 ## Interface and accessibility
-- Warm ivory, ink, electric cobalt, restrained lime. No fake testimonials, match percentages or popularity metrics.
+- Public page: deep navy, electric cobalt, restrained cyan and original Jippi artwork. Working app: white, ink, clear rules and a restrained blue accent. No gradients, fake testimonials, match percentages or popularity metrics.
 - Keep landing styles scoped to `.lz-` and working-app styles separate.
 - Preserve mobile layouts, native keyboard-operable dialogs, visible focus and reduced-motion support. Recording must stop on navigation.
 - Font assets should come from installed packages, not external font requests.
