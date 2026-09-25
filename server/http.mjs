@@ -32,10 +32,10 @@ export function createApiHandler({ env = process.env, service = createJobService
         const params = url.searchParams;
         const page = params.get('page') || '0';
         if (!/^\d{1,2}$/.test(page)) throw new SourceError('페이지 번호가 올바르지 않아요.', 400, 'BAD_QUERY');
-        const result = await service.search({ provider: params.get('source') || 'wanted', query: params.get('q') || '', page: Number(page), location: params.get('location') || 'all', refresh: params.get('refresh') === '1' });
+        const result = await service.search({ provider: params.get('source') || 'wanted', query: params.get('q') || '', page: Number(page), location: params.get('location') || 'all', category: params.get('category') || 'all', experience: params.get('experience') || 'all', refresh: params.get('refresh') === '1' });
         json(res, 200, result); return true;
       }
-      const match = /^\/api\/jobs\/(wanted|saramin)\/(\d{1,12})$/.exec(path);
+      const match = /^\/api\/jobs\/(wanted|saramin|jumpit|zighang)\/([0-9a-f-]{1,36})$/i.exec(path);
       if (match) { json(res, 200, await service.detail(match[1], match[2], url.searchParams.get('refresh') === '1')); return true; }
       throw new SourceError('없는 API 경로예요.', 404, 'NOT_FOUND');
     } catch (error) {

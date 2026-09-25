@@ -40,7 +40,7 @@ test('invalid parameters and missing optional keys do not call an upstream', asy
   await assert.rejects(service.search({ query: 'x'.repeat(121) }));
   await assert.rejects(service.search({ page: -1 })); await assert.rejects(service.detail('wanted', '../private'));
   await assert.rejects(service.search({ provider: 'saramin' }), error => error.code === 'KEY_REQUIRED');
-  assert.equal(calls, 0); assert.equal(service.sources()[1].enabled, false);
+  assert.equal(calls, 0); assert.equal(service.sources().find(source => source.id === 'saramin').enabled, false);
 });
 test('details contain real upstream text and do not treat a missing status as active', async () => {
   const service = createJobService({ fetcher: async () => response({ job: rawJob({ status: null, detail: { intro: '테스트 원문', main_tasks: '테스트 업무', requirements: '테스트 자격' } }) }) });

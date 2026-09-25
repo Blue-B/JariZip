@@ -2,15 +2,18 @@ import { parseRemoteJob } from './domain';
 import { canonicalJobUrl } from './jobSearch';
 import type { Job, WorkspaceState } from './types';
 
-export type JobSource = 'wanted' | 'saramin';
-export interface SearchResult { jobs: Job[]; nextPage: number | null; checkedAt: string; warnings: string[]; cached: boolean }
+export type JobSource = 'wanted' | 'saramin' | 'jumpit' | 'zighang';
+export type SearchSource = JobSource | 'all';
+export interface SourceResult { id: JobSource; name: string; count: number; status: 'ok' | 'error'; message?: string }
+export interface SearchResult { jobs: Job[]; nextPage: number | null; checkedAt: string; warnings: string[]; cached: boolean; total?: number; sourceResults: SourceResult[] }
 export interface SourceOption { id: JobSource; name: string; enabled: boolean; note: string }
+const providers: JobSource[] = ['wanted', 'saramin', 'jumpit', 'zighang'];
 const api = `${import.meta.env.BASE_URL}api`;
 
 async function request(path: string, signal?: AbortSignal): Promise<Record<string, unknown>> {
   let response: Response;
   try {
-    const signals = [AbortSignal.timeout(18000), ...(signal ? [signal] : [])];
+    const signals = [AbortSignal.timeout(30000), ...(signal ? [signal] : [])];
     response = await fetch(`${api}${path}`, { signal: AbortSignal.any(signals), headers: { Accept: 'application/json' } });
   } catch (error) {
     if (signal?.aborted) throw error;
@@ -30,23 +33,29 @@ async function request(path: string, signal?: AbortSignal): Promise<Record<strin
 export async function fetchSources(signal?: AbortSignal): Promise<SourceOption[]> {
   const data = await request('/sources', signal);
   if (!Array.isArray(data.sources)) throw new Error('출처 정보를 읽을 수 없어요.');
-  return data.sources.filter((s): s is SourceOption => s && ['wanted', 'saramin'].includes(s.id) && typeof s.enabled === 'boolean' && typeof s.name === 'string' && typeof s.note === 'string');
+  return data.sources.filter((s): s is SourceOption => s && providers.includes(s.id) && typeof s.enabled === 'boolean' && typeof s.name === 'string' && typeof s.note === 'string');
 }
-export async function searchRemoteJobs(source: JobSource, query: string, location: string, page: number, signal?: AbortSignal, refresh = false): Promise<SearchResult> {
-  const params = new URLSearchParams({ source, q: query, location, page: String(page), refresh: refresh ? '1' : '0' });
+export async function searchRemoteJobs(source: SearchSource, query: string, location: string, page: number, signal?: AbortSignal, refresh = false, category = 'all', experience = 'all'): Promise<SearchResult> {
+  const params = new URLSearchParams({ source, q: query, location, category, experience, page: String(page), refresh: refresh ? '1' : '0' });
   const data = await request(`/jobs?${params}`, signal);
-  if (!Array.isArray(data.jobs) || data.jobs.length > 20 || typeof data.checkedAt !== 'string' || !Number.isFinite(Date.parse(data.checkedAt))) throw new Error('공고 목록 형식이 올바르지 않아요.');
+  if (!Array.isArray(data.jobs) || data.jobs.length > 100 || typeof data.checkedAt !== 'string' || !Number.isFinite(Date.parse(data.checkedAt))) throw new Error('공고 목록 형식이 올바르지 않아요.');
   const jobs = data.jobs.map(parseRemoteJob);
   if (jobs.some(job => job.isDemo || job.verification !== 'source')) throw new Error('실제 출처가 확인되지 않은 결과는 표시하지 않아요.');
+  const sourceResults: SourceResult[] = Array.isArray(data.sourceResults) ? data.sourceResults.filter((item): item is SourceResult => item && providers.includes(item.id) && typeof item.name === 'string' && Number.isInteger(item.count) && item.count >= 0 && ['ok', 'error'].includes(item.status) && (item.message === undefined || typeof item.message === 'string')) : [];
   return { jobs, checkedAt: data.checkedAt, nextPage: Number.isInteger(data.nextPage) && Number(data.nextPage) > page && Number(data.nextPage) <= 49 ? Number(data.nextPage) : null,
-    warnings: Array.isArray(data.warnings) ? data.warnings.filter((v): v is string => typeof v === 'string') : [], cached: data.cached === true };
+    warnings: Array.isArray(data.warnings) ? data.warnings.filter((v): v is string => typeof v === 'string') : [], cached: data.cached === true,
+    total: Number.isSafeInteger(data.total) && Number(data.total) >= 0 ? Number(data.total) : undefined, sourceResults };
 }
 export function sourceIdentity(job: Pick<Job, 'sourceUrl'>): { source: JobSource; id: string } | null {
   try {
     const url = new URL(job.sourceUrl);
-    if (url.protocol !== 'https:' || url.username || url.password) return null;
+    if (url.protocol !== 'https:' || url.username || url.password || (url.port && url.port !== '443')) return null;
     const wanted = /^\/wd\/(\d{1,12})\/?$/.exec(url.pathname);
     if (url.hostname === 'www.wanted.co.kr' && wanted) return { source: 'wanted', id: wanted[1] };
+    const jumpit = /^\/position\/(\d{1,12})\/?$/.exec(url.pathname);
+    if (url.hostname === 'jumpit.saramin.co.kr' && jumpit) return { source: 'jumpit', id: jumpit[1] };
+    const zighang = /^\/recruitment\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\/?$/i.exec(url.pathname);
+    if (url.hostname === 'zighang.com' && zighang) return { source: 'zighang', id: zighang[1] };
     const id = url.searchParams.get('rec_idx');
     if (['www.saramin.co.kr', 'm.saramin.co.kr'].includes(url.hostname) && id && /^\d{1,12}$/.test(id)) return { source: 'saramin', id };
   } catch { /* Other sources can still be imported manually. */ }
@@ -58,6 +67,8 @@ export async function refreshRemoteJob(job: Pick<Job, 'sourceUrl'>, signal?: Abo
   const data = await request(`/jobs/${identity.source}/${identity.id}?refresh=${refresh ? '1' : '0'}`, signal);
   const record = parseRemoteJob(data.job);
   if (record.isDemo || record.verification !== 'source') throw new Error('공고 출처를 확인하지 못했어요.');
+  const returned = sourceIdentity(record);
+  if (returned?.source !== identity.source || returned.id !== identity.id) throw new Error('요청한 공고와 다른 응답을 받았어요.');
   return record;
 }
 

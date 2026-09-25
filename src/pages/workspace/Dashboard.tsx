@@ -57,7 +57,7 @@ export default function Dashboard() {
   ];
 
   const nextStep = (() => {
-    if (!realApplications.length) return { title: '실제 공고를 찾아볼까요?', body: '원티드 공개 공고를 검색해 관심 공고로 저장하면 이 화면이 채워져요.', cta: '채용 탐색 열기', to: '/app/discover', icon: <Compass size={16} /> };
+    if (!realApplications.length) return { title: '실제 공고를 찾아볼까요?', body: '여러 사이트의 실제 공고를 검색해 관심 공고로 저장하면 이 화면이 채워져요.', cta: '채용 탐색 열기', to: '/app/discover', icon: <Compass size={16} /> };
     if (!realDocumentGroups.length) return { title: '제출할 서류를 준비해볼까요?', body: '이력서나 자기소개서를 보관하면 제출본과 면접 준비에 바로 쓸 수 있어요.', cta: '서류 보관함 열기', to: '/app/documents', icon: <FolderOpen size={16} /> };
     const soon = interviews.filter(a => a.submissions.length > 0 && Date.parse(a.interviewAt) >= Date.now()).sort((a, b) => Date.parse(a.interviewAt) - Date.parse(b.interviewAt))[0];
     if (soon) return { title: '다가오는 면접, 내 이야기로 준비해요', body: `${soon.jobSnapshot.company}에 확정한 제출본을 바탕으로 답변을 연습해보세요.`, cta: '면접 연습 시작', to: `/app/interview?application=${soon.id}`, icon: <MessageCircle size={16} /> };

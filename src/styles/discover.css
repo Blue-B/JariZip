@@ -2,13 +2,24 @@
 .discover-heading { display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; margin: 4px 0 28px; }
 .discover-heading h1 { font-size: 27px; letter-spacing: -1px; line-height: 1.35; color: var(--pw-ink, #101a30); }
 .discover-heading p { margin-top: 10px; color: #64718a; line-height: 1.8; font-size: 14px; }
-.discover-search { display: flex; align-items: stretch; gap: 9px; padding: 12px; border: 1px solid var(--pw-line, #e2ddd2); border-radius: var(--pw-radius, 10px); background: #fff; }
-.discover-query { display: flex; align-items: center; gap: 10px; flex: 1; min-width: 160px; color: #66748c; padding-left: 8px; }
-.discover-query input { border: 0; box-shadow: none; background: transparent; min-width: 0; }
-.discover-search > label:not(.discover-query) { min-width: 110px; }
-.discover-search select { height: 100%; background: #fff; }
+.discover-search { display: grid; gap: 16px; padding: 18px; border: 1px solid var(--pw-line, #e2ddd2); border-radius: var(--pw-radius, 10px); background: #fff; }
+.discover-search-row { display: flex; gap: 12px; min-width: 0; }
+.discover-query { display: flex; align-items: center; gap: 10px; flex: 1; min-width: 0; color: #66748c; padding-left: 8px; border-bottom: 1px solid #e2e7ef; }
+.discover-query input { border: 0; box-shadow: none; background: transparent; min-width: 0; width: 100%; }
+.discover-filter-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+.discover-filter-grid label { display: grid; gap: 7px; min-width: 0; }
+.discover-filter-grid label > span { font-size: 11.5px; color: #53617a; font-weight: 600; }
+.discover-filter-grid select { width: 100%; min-width: 0; min-height: 42px; background: #f8f9fc; font-size: 13px; }
 .discover-privacy { margin: 12px 2px 22px; font-size: 12px; line-height: 1.8; color: #69758a; }
 .discover-results-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; border-bottom: 1px solid #dfe4ee; padding-bottom: 10px; color: #34425b; font-size: 13px; }
+.discover-result-actions { display: flex; flex-wrap: wrap; gap: 4px; }
+.discover-active-filters { margin: 7px 0 0; color: #5b6880; font-size: 12px; line-height: 1.7; overflow-wrap: anywhere; }
+.discover-source-results { display: flex; flex-wrap: wrap; gap: 9px; margin: 18px 0 10px; }
+.discover-source-result { display: flex; flex-wrap: wrap; gap: 6px 12px; align-items: center; padding: 9px 12px; border: 1px solid #dfe5ee; border-radius: 8px; background: #fff; color: #53617a; font-size: 12px; }
+.discover-source-result strong { color: #254aab; font-size: 12px; }
+.discover-source-result.is-error { border-color: #ebd9bd; background: #fff9f2; }
+.discover-source-result.is-error strong { color: #805829; }
+.discover-source-message { flex-basis: 100%; max-width: 60ch; font-size: 11.5px; line-height: 1.7; }
 .discover-source-time { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 14px; margin: 14px 0 8px; color: #66738b; font-size: 11px; line-height: 1.8; }
 .discover-source-time > span:last-child { margin-left: auto; }
 .discover-list { border-bottom: 1px solid var(--pw-line, #e2ddd2); }
@@ -18,7 +29,8 @@
 .discover-job:focus-visible { outline: 2px solid var(--pw-cobalt, #2348e8); outline-offset: -2px; }
 .discover-job .company-mark { background: #eef0f4; color: #53627a; width: 44px; height: 44px; border-radius: 10px; font-size: 18px; }
 .discover-job-main { display: flex; flex-direction: column; gap: 6px; min-width: 0; flex: 1; }
-.discover-company { font-size: 12px; color: #65728b; }
+.discover-company { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: 12px; color: #65728b; }
+.discover-source-label { display: inline-flex; padding: 2px 6px; border-radius: 4px; background: #eaf0fc; color: #305296; font-size: 10.5px; font-weight: 600; }
 .discover-job-main > strong { font-size: 16px; font-weight: 650; line-height: 1.65; letter-spacing: -.35px; word-break: keep-all; overflow-wrap: anywhere; }
 .discover-meta { display: flex; flex-wrap: wrap; gap: 5px 14px; color: #66748b; font-size: 12px; }
 .discover-meta > span { display: inline-flex; align-items: center; gap: 4px; }
@@ -32,6 +44,7 @@
 .discover-connection { margin-top: 26px; padding-top: 17px; border-top: 1px solid #e0e5ef; }
 .discover-connection summary { cursor: pointer; color: #3e4e68; }
 .discover-connection p { margin-top: 10px; max-width: 85ch; }
+.discover-connection > a { display: inline-flex; align-items: center; gap: 6px; color: #254aab; margin-top: 12px; }
 .discover-loading { display: flex; align-items: center; justify-content: center; gap: 12px; padding: 52px 20px; color: #68758d; font-size: 14px; }
 .discover-error { display: flex; align-items: flex-start; gap: 12px; margin: 18px 0; padding: 21px; background: #fff9f2; border: 1px solid #f0dfc8; border-radius: 10px; color: #805829; }
 .discover-error h2 { font-size: 16px; margin: 0 0 8px; }
@@ -47,17 +60,18 @@
 .workspace .legacy-samples { display: flex; align-items: center; gap: 14px; padding: 12px 24px; border-bottom: 1px solid #dfd8bd; background: #fffbed; color: #6e613a; font-size: 12px; line-height: 1.8; }
 .workspace .legacy-samples p { flex: 1; }
 @media (max-width: 1020px) {
-  .discover-search { flex-wrap: wrap; }
-  .discover-query { flex-basis: 100%; min-height: 44px; }
-  .discover-search > label:not(.discover-query) { flex: 1; }
   .discover-heading { flex-wrap: wrap; }
+  .discover-filter-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 @media (max-width: 760px) {
   .discover-heading { align-items: flex-start; gap: 15px; margin-bottom: 20px; }
   .discover-heading h1 { font-size: 25px; }
   .discover-heading p { font-size: 13px; }
-  .discover-search { padding: 10px; gap: 8px; }
-  .discover-search > .button { flex-basis: 100%; }
+  .discover-search { padding: 12px; gap: 14px; }
+  .discover-search-row { flex-wrap: wrap; }
+  .discover-query { flex-basis: 100%; min-height: 44px; }
+  .discover-search-row > .button { flex-basis: 100%; }
+  .discover-results-heading { align-items: flex-start; flex-wrap: wrap; }
   .discover-source-time > span:last-child { margin-left: 0; }
   .discover-job { flex-wrap: wrap; gap: 12px; padding: 20px 2px; }
   .discover-job > .company-mark { width: 35px; height: 35px; font-size: 15px; }
