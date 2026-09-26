@@ -4,13 +4,13 @@
 
 **채용공고, 실제 제출한 서류 버전, 지원 현황과 면접 준비를 내 PC에 모아두는 로컬 취업 기록 도구.**
 
-![JariZip 작업 화면](docs/preview/landing.png)
+<p align="center"><img src="docs/preview/jobs.png" width="920" alt="JariZip 작업 화면" /></p>
 
 ## 가장 쉬운 사용 방법
 
 일반 사용자에게는 **Windows 데스크톱 앱** 사용을 권장합니다. Node.js나 터미널을 직접 다룰 필요 없이 앱 안에서 설정하도록 구성되어 있습니다.
 
-> Windows **포터블 EXE**를 만드는 기능은 준비되어 있습니다. 설치 없이 파일 하나를 실행하는 방식이 기본 배포 형태입니다. 현재 GitHub Releases에는 아직 공개 배포 파일을 올리지 않았습니다.
+> Windows에서는 [v0.1.0 Beta의 포터블 EXE](https://github.com/Blue-B/JariZip/releases/tag/v0.1.0)를 내려받아 설치 없이 바로 실행할 수 있습니다.
 
 처음 실행하면 **공고 연결 마법사**가 열립니다.
 
