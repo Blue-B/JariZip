@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="512" height="512" role="img" aria-label="JariZip">
+  <rect width="64" height="64" rx="14" fill="#3158ef"/>
+  <path d="M17 19h15l7 7h9v22H17z" fill="#f6f6ec"/>
+  <path d="M17 26h31v22H17z" fill="#dce8ff"/>
+  <path d="M30 26v22" stroke="#3158ef" stroke-width="3" stroke-dasharray="3 3"/>
+  <rect x="26" y="32" width="8" height="11" rx="3" fill="#3158ef"/>
+  <circle cx="39" cy="37" r="2" fill="#17202a"/>
+  <circle cx="44" cy="37" r="2" fill="#17202a"/>
+</svg>

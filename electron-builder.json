@@ -1,0 +1,60 @@
+{
+  "$schema": "https://raw.githubusercontent.com/electron-userland/electron-builder/master/packages/app-builder-lib/scheme.json",
+  "appId": "com.jarizip.desktop",
+  "productName": "JariZip",
+  "copyright": "MIT licensed. JariZip contributors.",
+  "directories": {
+    "output": "release",
+    "buildResources": "desktop/build"
+  },
+  "files": [
+    "desktop/**/*",
+    "server/**/*",
+    "dist/**/*",
+    "package.json",
+    "!node_modules{,/**}",
+    "!**/*.test.mjs",
+    "!**/*.test.ts",
+    "!**/*.d.mts",
+    "!desktop/build{,/**}"
+  ],
+  "extraMetadata": {
+    "main": "desktop/main.mjs"
+  },
+  "asar": true,
+  "compression": "maximum",
+  "npmRebuild": false,
+  "nodeGypRebuild": false,
+  "buildDependenciesFromSource": false,
+  "electronLanguages": ["ko", "en-US"],
+  "win": {
+    "target": [
+      { "target": "portable", "arch": ["x64"] }
+    ],
+    "icon": "desktop/build/icon.ico",
+    "artifactName": "JariZip-${version}-${arch}-${target}.${ext}"
+  },
+  "portable": {
+    "artifactName": "JariZip-${version}-portable.${ext}",
+    "requestExecutionLevel": "user"
+  },
+  "nsis": {
+    "oneClick": false,
+    "perMachine": false,
+    "allowToChangeInstallationDirectory": true,
+    "createDesktopShortcut": true,
+    "createStartMenuShortcut": true,
+    "shortcutName": "JariZip",
+    "artifactName": "JariZip-${version}-setup.${ext}"
+  },
+  "linux": {
+    "target": [
+      { "target": "AppImage", "arch": ["x64"] },
+      { "target": "dir", "arch": ["x64"] }
+    ],
+    "icon": "desktop/build/icon.png",
+    "category": "Utility",
+    "synopsis": "로컬 취업 기록 도구",
+    "artifactName": "JariZip-${version}-${arch}.${ext}"
+  }
+}

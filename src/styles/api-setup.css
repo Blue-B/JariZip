@@ -1,0 +1,221 @@
+/* First-run API connection wizard (desktop bridge only).
+   Calm blue-gray surfaces, white working panel, readable charcoal text and the
+   single restrained blue accent used elsewhere. No gradients or decorative
+   motion; the only animation is an honest "checking" spinner that respects
+   prefers-reduced-motion. Scoped to `.api-setup` inside the portal modal so it
+   cannot leak into the browser-mode screens. */
+.api-setup {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  color: var(--rz-body, #3d4a5a);
+}
+
+.api-setup strong { color: var(--rz-strong, #1a2430); }
+
+/* Local-storage reassurance sits first so a nontechnical user reads it before typing a key. */
+.api-setup-local {
+  display: flex;
+  align-items: flex-start;
+  gap: 11px;
+  padding: 14px 16px;
+  border: 1px solid #d8e0ea;
+  border-radius: 10px;
+  background: #f1f5fa;
+}
+.api-setup-local > svg { flex-shrink: 0; margin-top: 2px; color: #2b5f8c; }
+.api-setup-local strong { display: block; font-size: 13.5px; }
+.api-setup-local p { margin-top: 4px; font-size: 12.5px; line-height: 1.75; color: #5c6b7e; }
+
+.api-setup-lead { font-size: 14px; line-height: 1.8; color: #3d4a5a; }
+
+/* --- Provider choice ------------------------------------------------------ */
+.api-setup-choices {
+  list-style: none;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  padding: 0;
+  margin: 0;
+}
+.api-setup-choice {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 18px;
+  border: 1px solid #d8e0ea;
+  border-radius: 12px;
+  background: #fff;
+}
+.api-setup-choice.is-recommended { border-color: #9db6cc; background: #f7fafd; }
+.api-setup-choice-head { display: flex; align-items: flex-start; gap: 11px; }
+.api-setup-choice-icon {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  background: #e7eef6;
+  color: #2b5f8c;
+}
+.api-setup-choice h3 { display: flex; align-items: center; gap: 7px; font-size: 15px; font-weight: 650; }
+.api-setup-choice p { margin-top: 4px; font-size: 12px; color: #5c6b7e; }
+.api-setup-choice .button { width: 100%; }
+
+/* --- Connect steps -------------------------------------------------------- */
+.api-setup-back {
+  align-self: flex-start;
+  border: 0;
+  background: none;
+  padding: 2px;
+  min-height: 32px;
+  color: #2b5f8c;
+  font-size: 13px;
+  font-weight: 600;
+}
+.api-setup-back:hover { text-decoration: underline; text-underline-offset: 3px; }
+
+.api-setup-steps {
+  margin: 0;
+  padding-left: 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 13.5px;
+  line-height: 1.8;
+  color: #3d4a5a;
+}
+.api-setup-steps li::marker { color: #2b5f8c; font-weight: 700; }
+
+/* --- Key field ------------------------------------------------------------ */
+.api-setup-field { display: flex; flex-direction: column; gap: 6px; font-size: 13px; font-weight: 600; }
+.api-setup-field .field-hint { margin-top: 0; }
+.api-setup-input {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin-top: 2px;
+  padding: 0 8px 0 12px;
+  min-height: 46px;
+  border: 1px solid #cfd8e3;
+  border-radius: 9px;
+  background: #fff;
+  color: #5c6b7e;
+}
+.api-setup-input:focus-within { border-color: #9db6cc; box-shadow: 0 0 0 3px #2b5f8c14; }
+.api-setup-input input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  background: transparent;
+  padding: 11px 0;
+  font-size: 14px;
+  letter-spacing: 0;
+}
+.api-setup-input input:focus { outline: none; }
+.api-setup-reveal {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 34px;
+  height: 34px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: #5c6b7e;
+}
+.api-setup-reveal:hover { background: #e9eff6; color: #2b5f8c; }
+
+.api-setup-error {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 11px 13px;
+  border-radius: 8px;
+  background: #fdeeea;
+  color: #9c382d;
+  font-size: 12.5px;
+  line-height: 1.7;
+}
+.api-setup-error > svg { flex-shrink: 0; margin-top: 2px; }
+
+/* --- Verifying ------------------------------------------------------------ */
+.api-setup-verifying {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 30px 10px;
+  text-align: center;
+}
+.api-setup-verifying p { font-size: 13.5px; line-height: 1.8; }
+.api-setup-verifying .field-hint { max-width: 380px; }
+.api-setup-spinner { color: #2b5f8c; animation: api-setup-spin 0.9s linear infinite; }
+@keyframes api-setup-spin { to { transform: rotate(360deg); } }
+
+/* --- Success -------------------------------------------------------------- */
+.api-setup-success {
+  display: flex;
+  align-items: flex-start;
+  gap: 13px;
+  padding: 18px;
+  border: 1px solid #bfdccb;
+  border-radius: 12px;
+  background: #eff7f1;
+}
+.api-setup-success-icon {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: #dbeee0;
+  color: #1f6b45;
+}
+.api-setup-success strong { display: block; font-size: 15px; }
+.api-setup-success p { margin-top: 5px; font-size: 13px; line-height: 1.75; color: #3d4a5a; }
+
+/* --- Overview / manage ---------------------------------------------------- */
+.api-setup-status { list-style: none; display: flex; flex-direction: column; gap: 10px; padding: 0; margin: 0; }
+.api-setup-status > li {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px 12px;
+  padding: 14px 16px;
+  border: 1px solid #e1e6ed;
+  border-radius: 10px;
+  background: #fff;
+}
+.api-setup-status > li > div:first-child { flex: 1; min-width: 160px; }
+.api-setup-status strong { display: block; font-size: 14px; }
+.api-setup-status span { display: block; margin-top: 3px; font-size: 12px; color: #5c6b7e; }
+.api-setup-status-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+
+/* --- Footer actions ------------------------------------------------------- */
+.api-setup-foot { display: flex; justify-content: flex-end; gap: 9px; flex-wrap: wrap; }
+.api-setup-privacy { font-size: 12px; line-height: 1.7; color: #5c6b7e; }
+.api-setup-saved-note {
+  padding: 12px 14px;
+  border: 1px solid #cfe0d6;
+  border-radius: 9px;
+  background: #f2f8f4;
+  font-size: 13px;
+  line-height: 1.75;
+  color: #2f5d45;
+}
+
+@media (max-width: 640px) {
+  .api-setup-choices { grid-template-columns: 1fr; }
+  .api-setup-foot { flex-direction: column-reverse; }
+  .api-setup-foot .button { width: 100%; }
+  .api-setup-status-actions { width: 100%; }
+  .api-setup-status-actions .button { flex: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .api-setup-spinner { animation-duration: 1.8s; }
+}

@@ -15,6 +15,7 @@ import Interview from './workspace/Interview';
 import Companies from './workspace/Companies';
 import Templates from './workspace/Templates';
 import Settings from './workspace/Settings';
+import { ApiSetupProvider } from '../components/ApiSetupWizard';
 import '../styles/workspace.css';
 import '../styles/readability.css';
 import '../styles/product-workspace.css';
@@ -92,4 +93,4 @@ function Shell() {
     {toast && <div className="toast" role={storageStatus === 'error' ? 'alert' : 'status'}>{storageStatus === 'error' || storageStatus === 'temporary' ? <AlertTriangle size={17}/> : <Check size={17}/>} {toast}</div>}{searchOpen && <QuickSearch close={() => setSearchOpen(false)}/>}{noticesOpen && <Modal title="기록한 면접 일정" description="직접 입력한 일정이에요. 캘린더 서비스와 자동 연동되지는 않아요." onClose={() => setNoticesOpen(false)}>{pending.length ? pending.map(a => <Link className="notification-item" key={a.id} to={`/app/applications?application=${a.id}`} onClick={() => setNoticesOpen(false)}><CompanyMark job={a.jobSnapshot} small/><div><strong>{a.jobSnapshot.company}</strong><span>{formatDate(a.interviewAt)} · {a.jobSnapshot.title}</span></div><ArrowUpRight size={17}/></Link>) : <EmptyState title="아직 등록한 면접이 없어요" description="지원 현황에서 면접 일정을 추가할 수 있어요."/>}</Modal>}
   </div>;
 }
-export default function Workspace() { return <WorkspaceProvider><Shell/></WorkspaceProvider>; }
+export default function Workspace() { return <WorkspaceProvider><ApiSetupProvider><Shell/></ApiSetupProvider></WorkspaceProvider>; }

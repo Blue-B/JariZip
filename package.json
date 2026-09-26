@@ -3,6 +3,7 @@
   "private": true,
   "version": "0.1.0",
   "description": "A local-first career workspace for Korean job seekers",
+  "author": "JariZip contributors",
   "type": "module",
   "license": "MIT",
   "engines": {
@@ -17,8 +18,15 @@
     "local:check": "node scripts/local.mjs --check --no-browser",
     "preview:start": "node scripts/preview.mjs start",
     "preview:stop": "node scripts/preview.mjs stop",
+    "desktop": "npm run build && electron desktop/main.mjs",
+    "desktop:smoke": "npm run build && node desktop/smoke.mjs",
+    "desktop:icons": "node desktop/build/make-icons.mjs",
+    "package:linux": "npm run build && electron-builder --linux dir AppImage",
+    "package:win": "npm run build && electron-builder --win portable",
+    "package:win:installer": "npm run build && electron-builder --win nsis",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run && node --test server/*.test.mjs scripts/*.test.mjs",
+    "test": "vitest run && node --test server/*.test.mjs scripts/*.test.mjs desktop/*.test.mjs",
+    "test:desktop": "node desktop/smoke.mjs",
     "test:live": "node scripts/check-live-jobs.mjs",
     "test:e2e": "playwright test",
     "check": "npm run typecheck && npm test && npm run build"
@@ -43,6 +51,8 @@
     "@types/react": "19.3.0",
     "@types/react-dom": "19.3.0",
     "@vitejs/plugin-react": "6.1.1",
+    "electron": "^43.3.0",
+    "electron-builder": "^26.15.3",
     "typescript": "7.0.2",
     "vite": "8.3.1",
     "vitest": "5.0.2"

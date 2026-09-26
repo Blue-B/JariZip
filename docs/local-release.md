@@ -2,7 +2,7 @@
 
 ## 배포 형태
 
-현재 결과물은 Node.js로 실행하는 한국어 로컬 웹 앱입니다. 코드 공개와 공용 웹 서비스 운영은 별개입니다. 내려받아 실행하는 사용자가 자기 PC에서 조회 서버를 실행하고 같은 PC의 브라우저로 접속합니다. 별도의 운영자 공용 서버, 사용자 계정, 중앙 이력서 DB는 필요하지 않습니다.
+현재 일반 사용자용 권장 형태는 **Windows 포터블 데스크톱 앱**입니다. Electron이 Node.js 조회 서버를 함께 포함해 실행하므로 사용자가 Node.js나 터미널을 직접 설치·조작할 필요가 없습니다. 개발자용 로컬 웹 모드도 그대로 유지합니다. 별도의 운영자 공용 서버, 사용자 계정, 중앙 이력서 DB는 필요하지 않습니다.
 
 Windows에서는 `start-jarizip.cmd`, macOS/Linux에서는 `sh start-jarizip.sh`를 사용합니다. 시작 파일도 Node.js 22.12 이상이 설치되어 있어야 하며, 최초 패키지 설치는 인터넷을 사용합니다. `node scripts/local.mjs --prepare`로 설치·빌드만, `npm run local:check`로 실행 환경만 검사할 수 있습니다.
 
@@ -16,12 +16,13 @@ npm start
 
 한 주소(`http://localhost:4178/`)를 계속 사용하세요. 서버는 기본적으로 `127.0.0.1`에만 바인딩합니다. 포트나 호스트를 바꾸면 브라우저 저장 영역이 달라질 수 있습니다. 사용을 끝낼 때 터미널에서 Ctrl+C로 종료합니다. Linux/WSL용 `preview:start` 보조 스크립트는 Windows 일반 터미널용 설치기가 아닙니다.
 
-현재 Windows/macOS 설치 프로그램, Node.js가 포함된 실행 파일, 자동 업데이트, 공용 웹 배포는 제공하지 않습니다. 소스 ZIP만 내려받아 두 번 클릭하는 배포물로 설명하지 마세요. 스마트폰 브라우저 레이아웃 검증은 스마트폰 단독 설치 지원을 의미하지 않습니다.
+Windows 데스크톱 앱은 Electron 셸로 제공하며 Node.js와 조회 서버를 함께 포함합니다. 기본 배포물은 설치 없이 실행하는 포터블 EXE입니다(코드 서명·자동 업데이트는 아직 없음). macOS 설치 프로그램, 자동 업데이트, 공용 웹 배포는 제공하지 않습니다. 스마트폰 브라우저 레이아웃 검증은 스마트폰 단독 설치 지원을 의미하지 않습니다. [데스크톱 앱 안내](desktop-app.md)
 
 ## 실제 기술 구성
 
 - 화면: React, TypeScript, React Router, CSS, Pretendard. Vite로 빌드합니다.
 - 조회 서버: Node.js 기본 `node:http`와 `fetch`. Python/FastAPI나 Express 서버가 아닙니다.
+- 데스크톱 셸: Electron. `contextIsolation` 켬·`nodeIntegration` 끔, 단일 인스턴스, 루프백 전용 로컬 서버, 5개 메서드 preload 브리지. 자격 증명은 OS 보안 저장소(`safeStorage`)로 암호화해 `userData`에 보관합니다.
 - 개인 자료: 브라우저 IndexedDB, `idb-keyval`. 서버에 이력서나 녹음을 저장하지 않습니다.
 - 문서: `pdfjs-dist`의 PDF 텍스트 추출, `mammoth`의 DOCX 텍스트 추출.
 - 입력 검사: Zod. 자동 검사: Vitest, Node 테스트, Playwright.

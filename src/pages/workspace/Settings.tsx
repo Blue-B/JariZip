@@ -7,9 +7,11 @@ import { exportBackup, readBackupFile } from '../../lib/files';
 import type { WorkspaceState } from '../../lib/types';
 import { Button, ConfirmDialog, Note, PageHeading, Tag } from '../../components/ui';
 import SourceConnections from '../../components/SourceConnections';
+import { useApiSetup } from '../../components/ApiSetupWizard';
 
 export default function Settings() {
   const { state, update, storageStatus, notify } = useWorkspace();
+  const apiSetup = useApiSetup();
   const [profile, setProfile] = useState(state.profile);
   const [skills, setSkills] = useState(state.profile.skills.join(', '));
   const [locations, setLocations] = useState(state.profile.locations.join(', '));
@@ -68,6 +70,12 @@ export default function Settings() {
 
         <section className="panel settings-section">
           <div className="settings-section-title"><span className="settings-icon"><Plug size={20}/></span><div><h2>공고 연결</h2><p>사용할 수 있는 출처와 실제 조회 상태를 확인하세요.</p></div></div>
+          {apiSetup.available
+            ? <div className="connection-desktop-entry">
+                <div><strong>처음 설정 마법사로 다시 열기</strong><p>고용24·사람인 공식 키를 발급 안내와 함께 다시 연결하거나 해제할 수 있어요. 키는 이 기기의 JariZip 앱에만 저장돼요.</p></div>
+                <Button variant="primary" onClick={apiSetup.openWizard}><Plug size={16}/>연결 설정</Button>
+              </div>
+            : <p className="connection-intro">이 브라우저 모드에서는 프로젝트의 <code>.env.local</code> 파일에 서버용 키를 직접 설정해요. 아래 출처별 안내를 확인하세요.</p>}
           <SourceConnections/>
         </section>
 

@@ -3,6 +3,11 @@ import { readFile, realpath, stat } from 'node:fs/promises';
 import { resolve, sep, extname } from 'node:path';
 import { createJobService, SourceError, APPROVED_SOURCES } from './job-sources.mjs';
 
+/** Stable local origin used by the browser mode and by the desktop shell. */
+export const DEFAULT_HOST = '127.0.0.1';
+export const DEFAULT_PORT = 4178;
+export const serverUrl = (port = DEFAULT_PORT, host = DEFAULT_HOST) => `http://${host}:${port}/`;
+
 const json = (res, status, value) => {
   res.writeHead(status, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff' });
   res.end(JSON.stringify(value));

@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowUpRight, RefreshCw } from 'lucide-react';
 import { canProbeSource, fetchSources, probeSource, SOURCE_SITES, type JobSource, type SourceOption } from '../lib/remoteJobs';
+import { useApiSetup } from './ApiSetupWizard';
 import '../styles/connections.css';
 
 type Probe = { state: 'loading' | 'ready' | 'error'; message: string };
@@ -10,6 +11,7 @@ type Probe = { state: 'loading' | 'ready' | 'error'; message: string };
  *  A live check is offered only for officially approved, key-configured sources, and the
  *  last result is cleared when the source list changes so it never mislabels a new check. */
 export default function SourceConnections() {
+  const apiSetup = useApiSetup();
   const [sources, setSources] = useState<SourceOption[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -29,7 +31,7 @@ export default function SourceConnections() {
       if (!controller.signal.aborted) setError(reason instanceof Error ? reason.message : '조회 서버를 확인하지 못했어요.');
     }).finally(() => { if (!controller.signal.aborted) setLoading(false); });
     return () => controller.abort();
-  }, [attempt]);
+  }, [attempt, apiSetup.revision, apiSetup.available]);
 
   useEffect(() => () => {
     for (const controller of controllers.current.values()) controller.abort();
@@ -53,8 +55,9 @@ export default function SourceConnections() {
 
   const statusMeta = (source: SourceOption) => {
     if (source.enabled) return '공식 API 설정됨 · 아래에서 실제 응답을 확인할 수 있어요';
-    if (source.id === 'saramin') return 'API 키 미설정 · 현재 자동 조회할 수 없음';
-    if (source.id === 'work24') return '인증키 미설정 · 현재 자동 조회할 수 없음';
+    const desktopHint = apiSetup.available ? ' 위의 연결 설정에서 키를 등록해주세요.' : '';
+    if (source.id === 'saramin') return `API 키 미설정 · 현재 자동 조회할 수 없음.${desktopHint}`;
+    if (source.id === 'work24') return `인증키 미설정 · 현재 자동 조회할 수 없음.${desktopHint}`;
     return '자동 조회 미사용 · 원문 사이트에서 직접 확인하고 보관';
   };
 
@@ -77,7 +80,9 @@ export default function SourceConnections() {
         </div>
       </li>;
     })}</ul>}
-    <p className="connection-footnote">사람인·고용24 공식 API는 서버에 각각 개인 발급 키(SARAMIN_ACCESS_KEY·WORK24_AUTH_KEY)를 설정한 경우에만 사용하며, 승인된 앱·사용 범위와 제공사가 정한 호출 한도를 따릅니다. 고용24 결과는 원문 링크와 출처 표시를 함께 제공해야 합니다. 키만으로 재배포·자동 수집 허가가 되지는 않습니다. 다른 출처의 자동 수집 코드는 실행되지 않습니다.</p>
+    <p className="connection-footnote">{apiSetup.available
+      ? '데스크톱 앱에서는 위의 연결 설정에서 발급받은 키를 이 기기에만 저장해요. 사람인·고용24 공식 API는 승인된 앱·사용 범위와 제공사가 정한 호출 한도를 따릅니다. 고용24 결과는 원문 링크와 출처 표시를 함께 제공해야 하며, 키만으로 재배포·자동 수집 허가가 되지는 않습니다. 다른 출처의 자동 수집 코드는 실행되지 않습니다.'
+      : '사람인·고용24 공식 API는 서버에 각각 개인 발급 키(SARAMIN_ACCESS_KEY·WORK24_AUTH_KEY)를 설정한 경우에만 사용하며, 승인된 앱·사용 범위와 제공사가 정한 호출 한도를 따릅니다. 고용24 결과는 원문 링크와 출처 표시를 함께 제공해야 합니다. 키만으로 재배포·자동 수집 허가가 되지는 않습니다. 다른 출처의 자동 수집 코드는 실행되지 않습니다.'}</p>
     <Link to="/app/discover" className="connection-link">채용 탐색으로 이동<ArrowUpRight size={15} aria-hidden/></Link>
   </div>;
 }
