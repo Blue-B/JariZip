@@ -163,7 +163,7 @@ export default function DiscoverJobs() {
   const failures = result?.sourceResults.filter(item => item.status === 'error') ?? [];
   const filters = [applied.query ? `“${applied.query}”` : '', applied.location !== 'all' ? jobLocations.find(item => item.id === applied.location)?.name : '', applied.category !== 'all' ? jobCategories.find(item => item.id === applied.category)?.name : '', applied.experience !== 'all' ? jobExperiences.find(item => item.id === applied.experience)?.name : ''].filter(Boolean);
   const officialSites = (Object.keys(SOURCE_SITES) as (keyof typeof SOURCE_SITES)[]).map(id => SOURCE_SITES[id]);
-  const disabledReason = (item: SourceOption) => item.id === 'saramin' ? 'API 키 미설정' : '제공사 사전 승인 없음';
+  const disabledReason = (item: SourceOption) => item.id === 'saramin' || item.id === 'work24' ? 'API 키 미설정' : '제공사 사전 승인 없음';
   return <div className="discover-page page-enter">
     <header className="discover-heading">
       <div><h1>채용 공고</h1></div>

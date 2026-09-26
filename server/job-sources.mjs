@@ -2,7 +2,8 @@
 // Official, permission-based sources only. The normalizers below are kept inert for fixture
 // and schema tests but the unofficial Wanted/Jumpit/Zighang endpoints are never called here.
 import { fingerprint, MAX_PAGE, streamJobs } from './job-stream.mjs';
-import { isJobLocation, isJobCategory, isJobExperience, SARAMIN_LOCATIONS } from './job-catalog.mjs';
+import { isJobLocation, isJobCategory, isJobExperience, SARAMIN_LOCATIONS, WORK24_REGIONS, WORK24_OCCUPATIONS, WORK24_CAREER } from './job-catalog.mjs';
+import { childOf, childrenOf, textOf, leafObjectOf, parseXml, XmlError } from './xml.mjs';
 
 export class SourceError extends Error {
   constructor(message, status = 502, code = 'SOURCE_ERROR') { super(message); this.status = status; this.code = code; }
@@ -120,17 +121,117 @@ export function normalizeZighang(value, checkedAt) {
   };
 }
 
+const WORK24_CAREER_LABELS = Object.freeze({ N: '신입', E: '경력', Z: '경력 무관' });
+
+// Employment type codes from the official list-endpoint documentation; unmapped codes stay '미기재'.
+const WORK24_EMPLOYMENT_TYPE = Object.freeze({
+  10: '기간의 정함이 없는 근로계약', 11: '기간의 정함이 없는 근로계약(시간선택제)',
+  20: '기간의 정함이 있는 근로계약', 21: '기간의 정함이 있는 근로계약(시간선택제)',
+  4: '파견근로', 5: '대체인력채용',
+});
+
+/** A Work24 list row from the official 채용정보목록 XML (`<wanted>`). */
+export function normalizeWork24ListItem(node, checkedAt) {
+  const raw = leafObjectOf(node);
+  const wantedAuthNo = text(raw.wantedAuthNo, 60);
+  const company = text(raw.company, 200);
+  const title = text(raw.title, 200);
+  if (!wantedAuthNo || !company || !title) throw new SourceError('고용24 공고 응답을 읽을 수 없어요.', 502, 'SOURCE_FORMAT');
+  const deadline = koreaDate(raw.closeDt, true);
+  const infoSvc = text(raw.infoSvc, 40);
+  const location = [text(raw.basicAddr, 200), text(raw.detailAddr, 200)].filter(Boolean).join(' ').trim();
+  const employment = WORK24_EMPLOYMENT_TYPE[Number(raw.empTpCd)] || '미기재';
+  const salary = [text(raw.salTpNm, 40), text(raw.sal, 80)].filter(Boolean).join(' ').trim() || '미기재';
+  const minEdubg = text(raw.minEdubg, 60), maxEdubg = text(raw.maxEdubg, 60);
+  const education = minEdubg && minEdubg === maxEdubg ? minEdubg : [minEdubg, maxEdubg].filter(Boolean).join('~');
+  return {
+    id: `work24-${wantedAuthNo}`, company, title, role: text(raw.indTpNm, 200) || '미분류',
+    location: location || text(raw.region, 200) || '지역 미기재',
+    experience: WORK24_CAREER_LABELS[text(raw.career, 1)] || '경력 미기재',
+    employment, salary, skills: [],
+    publishedAt: koreaDate(raw.regDt), deadline,
+    deadlineType: deadline ? 'date' : 'unknown',
+    status: deadline && Date.parse(deadline) < Date.now() ? 'closed' : 'open',
+    verification: 'source', verifiedAt: checkedAt, source: '고용24', sourceUrl: work24ListUrl(wantedAuthNo),
+    description: `${title}\n\n고용24(워크넷 인증) 공식 Open API가 제공한 목록 정보입니다. 상세 담당 업무·자격·전형 방법은 원본에서 확인한 뒤 필요한 내용을 보완해주세요.`,
+    requirements: education ? `학력: ${education}` : '', benefits: '',
+    companyInfo: [text(raw.indTpNm, 200) ? `업종: ${text(raw.indTpNm, 200)}` : '', location ? `근무지: ${location}` : '', infoSvc ? `정보제공처: ${infoSvc === 'VALIDATION' ? '워크넷 인증' : infoSvc}` : ''].filter(Boolean).join('\n'),
+    saved: false, isDemo: false, color: 'ink',
+  };
+}
+
+/** A Work24 detail document from the official 채용정보상세 XML (`<wantedDtl>`). */
+export function normalizeWork24Detail(node, checkedAt) {
+  const wantedAuthNo = textOf(node, 'wantedAuthNo');
+  if (!wantedAuthNo) throw new SourceError('고용24 상세 응답을 읽을 수 없어요.', 502, 'SOURCE_FORMAT');
+  const corp = childOf(node, 'corpInfo');
+  const info = childOf(node, 'wantedInfo');
+  if (!info) throw new SourceError('고용24 상세 응답을 읽을 수 없어요.', 502, 'SOURCE_FORMAT');
+  const company = text(textOf(corp, 'corpNm'), 200);
+  const title = text(textOf(info, 'wantedTitle'), 200);
+  if (!company || !title) throw new SourceError('고용24 상세 응답을 읽을 수 없어요.', 502, 'SOURCE_FORMAT');
+  const deadline = koreaDate(textOf(info, 'receiptCloseDt'), true);
+  const keywordList = childOf(info, 'keywordList');
+  const skills = [...new Set([textOf(info, 'jobsNm'), ...childrenOf(keywordList, 'srchKeywordNm').map(child => child.text.trim())].map(value => text(value, 80)).filter(Boolean))].slice(0, 40);
+  const homepage = text(textOf(corp, 'homePg'), 500);
+  const address = [text(textOf(corp, 'corpAddr'), 200), textOf(info, 'workRegion')].filter(Boolean).join(' · ');
+  const salary = [text(textOf(info, 'salTpNm'), 40), textOf(info, 'salTpCd')].filter(Boolean).join(' ').trim() || '미기재';
+  const facts = [
+    ['회사규모', textOf(corp, 'busiSize')], ['근로자수', textOf(corp, 'totPsncnt')], ['주요사업', plain(textOf(corp, 'busiCont'))],
+    ['학력', textOf(info, 'eduNm')], ['경력', textOf(info, 'enterTpNm')], ['모집인원', textOf(info, 'collectPsncnt')],
+    ['전형방법', textOf(info, 'selMthd')], ['접수방법', textOf(info, 'rcptMthd')], ['제출서류', textOf(info, 'submitDoc')],
+    ['근무시간', textOf(info, 'workdayWorkhrCont')], ['4대보험', textOf(info, 'fourIns')], ['퇴직금', textOf(info, 'retirepay')],
+  ].filter(([, value]) => value);
+  const requirements = [
+    textOf(info, 'enterTpNm') ? `경력: ${textOf(info, 'enterTpNm')}` : '',
+    textOf(info, 'eduNm') ? `학력: ${textOf(info, 'eduNm')}` : '',
+    textOf(info, 'certificate') ? `자격면허: ${textOf(info, 'certificate')}` : '',
+    textOf(info, 'major') ? `전공: ${textOf(info, 'major')}` : '',
+    textOf(info, 'pfCond') ? `우대조건: ${textOf(info, 'pfCond')}` : '',
+    textOf(info, 'etcPfCond') ? `기타 우대조건: ${textOf(info, 'etcPfCond')}` : '',
+  ].filter(Boolean).join('\n');
+  const companyInfo = [...facts.map(([name, value]) => `${name}: ${value}`), homepage ? `출처에 등록된 홈페이지: ${homepage}` : ''].filter(Boolean).join('\n');
+  return {
+    id: `work24-${wantedAuthNo}`, company, title,
+    role: textOf(info, 'jobsNm') || '미분류',
+    location: address || '지역 미기재',
+    experience: textOf(info, 'enterTpNm') || '경력 미기재',
+    employment: textOf(info, 'empTpNm') || '미기재',
+    salary, skills, publishedAt: '', deadline, deadlineType: deadline ? 'date' : 'unknown',
+    status: deadline && Date.parse(deadline) < Date.now() ? 'closed' : 'open',
+    verification: 'source', verifiedAt: checkedAt, source: '고용24', sourceUrl: work24ListUrl(wantedAuthNo),
+    description: plain(textOf(info, 'jobCont')) || `${title}\n\n고용24 공식 Open API 상세 응답입니다. 본문이 비어 있으면 원본에서 확인해주세요.`,
+    requirements, benefits: plain(textOf(info, 'etcWelfare')), companyInfo,
+    saved: false, isDemo: false, color: 'ink',
+  };
+}
+
+/**
+ * Composed normalizer used by the guarded service path. Accepts either a parsed
+ * `<wanted>` list node or a `<wantedDtl>` detail node so tests can drive one entry point.
+ */
+export function normalizeWork24(value, checkedAt) {
+  if (!value || typeof value !== 'object') throw new SourceError('고용24 공고 응답을 읽을 수 없어요.', 502, 'SOURCE_FORMAT');
+  if (value.name === 'wantedDtl' || childOf(value, 'wantedInfo')) return normalizeWork24Detail(value, checkedAt);
+  if (value.name === 'wanted' || textOf(value, 'wantedAuthNo')) return normalizeWork24ListItem(value, checkedAt);
+  throw new SourceError('고용24 공고 응답 형식이 바뀌었어요.', 502, 'SOURCE_FORMAT');
+}
+
 /** Unofficial endpoints that require prior written permission. Never called automatically. */
 export const UNAPPROVED_SOURCES = Object.freeze(['wanted', 'jumpit', 'zighang']);
 /** Providers with an official, permission-based API wired into this server. */
-export const APPROVED_SOURCES = Object.freeze(['saramin']);
+export const APPROVED_SOURCES = Object.freeze(['saramin', 'work24']);
 
 export function sourceConfiguration(env = process.env) {
   const saraminConfigured = Boolean(env.SARAMIN_ACCESS_KEY);
+  const work24Configured = Boolean(env.WORK24_AUTH_KEY);
   return [
     { id: 'saramin', name: '사람인', enabled: saraminConfigured, note: saraminConfigured
       ? '공식 채용 정보 API · 서버에 개인 발급 키 설정됨. 제공사 승인 범위와 1일 500회 공식 한도 안에서만 사용하세요.'
-      : '공식 채용 정보 API · 서버에 발급받은 SARAMIN_ACCESS_KEY를 설정해야 사용할 수 있어요. 키 발급·앱별 승인·사용 범위는 제공사 조건을 따릅니다.' },
+      : '공식 채용 정보 API · 서버의 .env.local에 발급받은 SARAMIN_ACCESS_KEY를 설정해야 사용할 수 있어요. 키 발급·앱별 승인·사용 범위는 제공사 조건을 따릅니다.' },
+    { id: 'work24', name: '고용24', enabled: work24Configured, note: work24Configured
+      ? '고용24(한국고용정보원) 공식 Open API · 서버에 발급받은 WORK24_AUTH_KEY 설정됨. 결과는 원문 링크·출처 표시와 함께 제공해야 하며, 승인 범위 안에서만 사용하세요.'
+      : '고용24 공식 Open API · 서버의 .env.local에 발급받은 WORK24_AUTH_KEY를 설정해야 사용할 수 있어요. 고용24 기업회원 로그인 후 서비스별 심사·승인·인증키 발급이 필요하며, 인증키는 타인에게 양도할 수 없습니다.' },
     { id: 'wanted', name: '원티드', enabled: false, note: '공식 제휴 API 아님 · 제공사 사전 승인 없이 자동 수집하지 않아요. 원문 사이트에서 직접 확인하고 보관해주세요.' },
     { id: 'jumpit', name: '점핏', enabled: false, note: '공식 제휴 API 아님 · 제공사 사전 승인 없이 자동 수집하지 않아요. 원문 사이트에서 직접 확인하고 보관해주세요.' },
     { id: 'zighang', name: '직행', enabled: false, note: '공식 제휴 API 아님 · 제공사 사전 승인 없이 자동 수집하지 않아요. 원문 사이트에서 직접 확인하고 보관해주세요.' },
@@ -182,7 +283,48 @@ function matchesCareer(raw, experience) {
   const min = level.min, max = level.max;
   return Number.isFinite(min) && min <= years && (!Number.isFinite(max) || max >= years);
 }
-const normalizers = { wanted: normalizeWanted, saramin: normalizeSaramin, jumpit: normalizeJumpit, zighang: normalizeZighang };
+const normalizers = { wanted: normalizeWanted, saramin: normalizeSaramin, jumpit: normalizeJumpit, zighang: normalizeZighang, work24: normalizeWork24 };
+// Work24 serves XML, not JSON. Bounded to a single page of at most 100 displayed rows or one detail.
+export const WORK24_LIST_URL = 'https://www.work24.go.kr/cm/openApi/call/wk/callOpenApiSvcInfo210L01.do';
+export const WORK24_DETAIL_URL = 'https://www.work24.go.kr/cm/openApi/call/wk/callOpenApiSvcInfo210D01.do';
+export const WORK24_PAGE_SIZE = 100;
+// `startPage` is 1-based and capped at 1000 by the official documentation, so the largest
+// zero-based page index that keeps `startPage <= 1000` is 9 (10 pages of 100 rows).
+export const WORK24_MAX_PAGE = 9;
+const WORK24_INFO_SVC = 'VALIDATION';
+// Public original-listing URLs. `infoSvc=VALIDATION` is required by the detail API and by this link.
+const work24ListUrl = wantedAuthNo => `https://www.work24.go.kr/wk/a/b/1500/empDetailAuthView.do?wantedAuthNo=${encodeURIComponent(wantedAuthNo)}&infoTypeCd=${WORK24_INFO_SVC}&infoTypeGroup=tb_workinfoworknet`;
+
+/** Read a Work24 XML document, bounded and with the upstream error envelope surfaced explicitly. */
+async function readXml(url, fetcher) {
+  let response;
+  try { response = await fetcher(url, { headers: { Accept: 'application/xml, text/xml' }, redirect: 'error', signal: AbortSignal.timeout(12000) }); }
+  catch { throw new SourceError('채용 서비스에 연결하지 못했어요. 잠시 후 다시 시도해주세요.', 502, 'SOURCE_UNAVAILABLE'); }
+  if (!response.ok) {
+    if ([404, 410].includes(response.status)) throw new SourceError('원본에서 공고를 찾을 수 없어요. 마감되거나 삭제됐을 수 있어요.', 404, 'NOT_FOUND');
+    if ([401, 403, 429].includes(response.status)) throw new SourceError('출처에서 조회를 제한했어요. 우회하지 않으며 원본 사이트에서 확인할 수 있어요.', 503, 'SOURCE_RESTRICTED');
+    throw new SourceError('채용 서비스가 정상 응답하지 않았어요.', 502, 'SOURCE_UNAVAILABLE');
+  }
+  const reader = response.body?.getReader();
+  if (!reader) throw new SourceError('비어 있는 응답을 받았어요.');
+  const chunks = []; let size = 0;
+  try {
+    for (;;) {
+      const { value, done } = await reader.read(); if (done) break;
+      size += value.byteLength;
+      if (size > 2_000_000) { await reader.cancel(); throw new SourceError('공고 응답이 처리 가능한 크기를 넘었어요.', 502, 'SOURCE_SIZE'); }
+      chunks.push(value);
+    }
+    const root = parseXml(Buffer.concat(chunks).toString('utf8'));
+    const error = textOf(root, 'error');
+    if (error) throw new SourceError('고용24 API 키, 권한 또는 사용 한도를 확인해주세요.', 503, 'SOURCE_RESTRICTED');
+    return root;
+  } catch (problem) {
+    if (problem instanceof SourceError) throw problem;
+    if (problem instanceof XmlError) throw new SourceError('공고 응답 형식이 바뀌었어요.', 502, 'SOURCE_FORMAT');
+    throw new SourceError('공고 응답을 읽지 못했어요.', 502, 'SOURCE_FORMAT');
+  }
+}
 
 export function createJobService({ fetcher = fetch, env = process.env, now = () => new Date() } = {}) {
   const cache = new Map(), inflight = new Map();
@@ -202,6 +344,76 @@ export function createJobService({ fetcher = fetch, env = process.env, now = () 
     if (!Object.hasOwn(normalizers, provider)) throw new SourceError('지원하지 않는 공고 출처예요.', 400, 'BAD_SOURCE');
     if (!APPROVED_SOURCES.includes(provider)) throw new SourceError('이 출처는 제공사의 사전 승인 없이 자동으로 조회하지 않아요. 원문 사이트에서 직접 확인해주세요.', 403, 'SOURCE_NOT_PERMITTED');
     if (provider === 'saramin' && !env.SARAMIN_ACCESS_KEY) throw new SourceError('사람인은 서버에 발급받은 API 키를 설정해야 해요.', 503, 'KEY_REQUIRED');
+    if (provider === 'work24' && !env.WORK24_AUTH_KEY) throw new SourceError('고용24는 서버에 발급받은 인증키(WORK24_AUTH_KEY)를 설정해야 해요.', 503, 'KEY_REQUIRED');
+  }
+  async function loadSaramin({ query, page, location, category, experience }) {
+    const checkedAt = now().toISOString(), warnings = [];
+    const url = new URL('https://oapi.saramin.co.kr/job-search');
+    Object.entries({ 'access-key': env.SARAMIN_ACCESS_KEY, keywords: query.trim(), count: '20', start: String(page), sort: 'pd', fields: 'posting-date,expiration-date' }).forEach(([k, v]) => url.searchParams.set(k, v));
+    if (location !== 'all') url.searchParams.set('loc_mcd', String(SARAMIN_LOCATIONS[location]));
+    const raw = await readJson(url, fetcher);
+    if (raw.code || !raw.jobs) throw new SourceError('사람인 API 키, 권한 또는 사용 한도를 확인해주세요.', 503, 'SOURCE_RESTRICTED');
+    const values = list(raw.jobs.job);
+    let nextPage = (page + 1) * 20 < Number(raw.jobs.total) && page < MAX_PAGE ? page + 1 : null;
+    warnings.push('사람인 공식 API 제공 요약입니다. 전체 본문은 원본 사이트에서 확인해주세요.');
+    if (category !== 'all' || experience !== 'all') warnings.push('사람인 분야·경력은 현재 출처 페이지에서 조건을 적용합니다. 전체 검색 결과의 총건수와는 다릅니다.');
+    if (!Array.isArray(values) || values.length > 20) throw new SourceError('공고 목록 응답 형식이 바뀌었어요.', 502, 'SOURCE_FORMAT');
+    if (values.length === 0) nextPage = null;
+    if (page === MAX_PAGE && values.length) warnings.push('안전한 조회 범위의 끝에 도달했어요. 조건을 좁혀 다시 검색해주세요.');
+    let invalid = 0;
+    const jobs = values.flatMap(value => {
+      try {
+        const job = normalizeSaramin(value, checkedAt);
+        if (job.status !== 'open' || !matchesCareer(value, experience)) return [];
+        if (!matchesLocalCategory(job, category)) return [];
+        return [job];
+      } catch { invalid++; return []; }
+    });
+    if (invalid && invalid === values.length) throw new SourceError('공고 형식을 읽을 수 없어 결과를 표시하지 않았어요.', 502, 'SOURCE_FORMAT');
+    if (invalid) warnings.push(`형식을 읽지 못한 공고 ${invalid}건은 제외했어요.`);
+    return { provider: 'saramin', jobs, nextPage, checkedAt, warnings, pageFingerprint: values.length ? fingerprint(values.map(value => value.id)) : undefined, sourceResults: [{ id: 'saramin', name: '사람인', count: jobs.length, status: 'ok', exhausted: nextPage === null }] };
+  }
+  // Work24 list is 1-based and caps display at 100. Filters map to official region/occupation/
+  // career codes; an unmapped category stays client-side so results are narrowed, never invented.
+  async function loadWork24({ query, page, location, category, experience }) {
+    const checkedAt = now().toISOString(), warnings = [];
+    // Work24 caps startPage at 1000. Beyond the documented page budget, stop the source
+    // cleanly (empty, exhausted page) instead of surfacing an error to aggregate browsing.
+    if (page > WORK24_MAX_PAGE) return { provider: 'work24', jobs: [], nextPage: null, checkedAt, warnings: ['고용24는 공식 조회 범위(최대 1000건)에 도달해 더 이상 이어보기를 제공하지 않아요. 조건을 좁혀 다시 검색해주세요.'], pageFingerprint: undefined, sourceResults: [{ id: 'work24', name: '고용24', count: 0, status: 'ok', exhausted: true }] };
+    const url = new URL(WORK24_LIST_URL);
+    Object.entries({ authKey: env.WORK24_AUTH_KEY, callTp: 'L', returnType: 'XML', startPage: String(page * WORK24_PAGE_SIZE + 1), display: String(WORK24_PAGE_SIZE) }).forEach(([k, v]) => url.searchParams.set(k, v));
+    if (query.trim()) url.searchParams.set('keyword', query.trim());
+    if (location !== 'all' && WORK24_REGIONS[location]) url.searchParams.set('region', WORK24_REGIONS[location]);
+    const occupations = WORK24_OCCUPATIONS[category];
+    if (occupations?.length) url.searchParams.set('occupation', occupations.join('|'));
+    const career = WORK24_CAREER[experience];
+    if (career) {
+      url.searchParams.set('career', career.career);
+      if (career.minCareerM) { url.searchParams.set('minCareerM', String(career.minCareerM)); url.searchParams.set('maxCareerM', String(career.maxCareerM)); }
+    }
+    const root = await readXml(url, fetcher);
+    if (root.name !== 'wantedRoot') throw new SourceError('고용24 목록 응답 형식이 바뀌었어요.', 502, 'SOURCE_FORMAT');
+    const values = childrenOf(root, 'wanted');
+    const total = Number(textOf(root, 'total')) || 0;
+    let nextPage = (page + 1) * WORK24_PAGE_SIZE < total && page < WORK24_MAX_PAGE ? page + 1 : null;
+    warnings.push('고용24 공식 Open API 제공 정보입니다. 전체 본문과 정확한 접수 기간은 원문 사이트에서 확인해주세요.');
+    if (category !== 'all' || experience !== 'all') warnings.push('고용24 분야·경력은 현재 출처 페이지에서 조건을 적용합니다. 전체 검색 결과의 총건수와는 다릅니다.');
+    if (values.length === 0) nextPage = null;
+    if (page >= WORK24_MAX_PAGE && values.length) warnings.push('안전한 조회 범위의 끝에 도달했어요. 조건을 좁혀 다시 검색해주세요.');
+    let invalid = 0;
+    const jobs = values.flatMap(value => {
+      try {
+        const job = normalizeWork24(value, checkedAt);
+        if (job.status !== 'open') return [];
+        // The occupation code already narrowed the source page; only unmapped categories are
+        // re-checked locally so a verified mapping is not silently over-filtered.
+        if (!occupations?.length && !matchesLocalCategory(job, category)) return [];
+        return [job];
+      } catch { invalid++; return []; }
+    });
+    if (invalid && invalid === values.length) throw new SourceError('공고 형식을 읽을 수 없어 결과를 표시하지 않았어요.', 502, 'SOURCE_FORMAT');
+    if (invalid) warnings.push(`형식을 읽지 못한 공고 ${invalid}건은 제외했어요.`);
+    return { provider: 'work24', jobs, nextPage, checkedAt, warnings, pageFingerprint: values.length ? fingerprint(values.map(value => textOf(value, 'wantedAuthNo'))) : undefined, sourceResults: [{ id: 'work24', name: '고용24', count: jobs.length, status: 'ok', exhausted: nextPage === null }] };
   }
   async function search({ provider = 'all', query = '', page = 0, location = 'all', category = 'all', experience = 'all', refresh = false, cursor } = {}) {
     if (provider !== 'all') requireSource(provider);
@@ -211,7 +423,7 @@ export function createJobService({ fetcher = fetch, env = process.env, now = () 
     // Do not cache aggregate failures for a minute: each successful provider has its own cache.
     if (provider === 'all') {
       const enabled = sources().filter(source => source.enabled);
-      if (!enabled.length) throw new SourceError('사용하도록 설정된 공식 출처가 없어요. 원문 사이트에서 직접 확인해 저장하거나, 사람인 공식 API 키를 서버에 설정해주세요.', 409, 'NO_ENABLED_SOURCE');
+      if (!enabled.length) throw new SourceError('사용하도록 설정된 공식 출처가 없어요. 원문 사이트에서 직접 확인해 저장하거나, 사람인·고용24 공식 API 키를 서버에 설정해주세요.', 409, 'NO_ENABLED_SOURCE');
       const results = await Promise.allSettled(enabled.map(source => search({ provider: source.id, query, page, location, category, experience, refresh })));
       const successful = results.filter(result => result.status === 'fulfilled').map(result => result.value);
       if (!successful.length) throw new SourceError('연결한 모든 출처의 조회에 실패했어요. 출처별 조회 또는 설정에서 원인을 확인해주세요.', 503, 'ALL_SOURCES_FAILED');
@@ -226,46 +438,31 @@ export function createJobService({ fetcher = fetch, env = process.env, now = () 
         sourceResults: results.map((result, index) => ({ id: enabled[index].id, name: enabled[index].name, count: result.status === 'fulfilled' ? result.value.jobs.length : 0, status: result.status === 'fulfilled' ? 'ok' : 'error', ...(result.status === 'rejected' ? { message: result.reason instanceof SourceError ? result.reason.message : '출처 응답을 읽지 못했어요.' } : {}) })),
       };
     }
-    return obtain(key, async () => {
-      const checkedAt = now().toISOString(), warnings = [];
-      const url = new URL('https://oapi.saramin.co.kr/job-search');
-      Object.entries({ 'access-key': env.SARAMIN_ACCESS_KEY, keywords: query.trim(), count: '20', start: String(page), sort: 'pd', fields: 'posting-date,expiration-date' }).forEach(([k, v]) => url.searchParams.set(k, v));
-      if (location !== 'all') url.searchParams.set('loc_mcd', String(SARAMIN_LOCATIONS[location]));
-      const raw = await readJson(url, fetcher);
-      if (raw.code || !raw.jobs) throw new SourceError('사람인 API 키, 권한 또는 사용 한도를 확인해주세요.', 503, 'SOURCE_RESTRICTED');
-      const values = list(raw.jobs.job);
-      let nextPage = (page + 1) * 20 < Number(raw.jobs.total) && page < MAX_PAGE ? page + 1 : null;
-      warnings.push('사람인 공식 API 제공 요약입니다. 전체 본문은 원본 사이트에서 확인해주세요.');
-      if (category !== 'all' || experience !== 'all') warnings.push('사람인 분야·경력은 현재 출처 페이지에서 조건을 적용합니다. 전체 검색 결과의 총건수와는 다릅니다.');
-      if (!Array.isArray(values) || values.length > 20) throw new SourceError('공고 목록 응답 형식이 바뀌었어요.', 502, 'SOURCE_FORMAT');
-      if (values.length === 0) nextPage = null;
-      if (page === MAX_PAGE && values.length) warnings.push('안전한 조회 범위의 끝에 도달했어요. 조건을 좁혀 다시 검색해주세요.');
-      let invalid = 0;
-      const jobs = values.flatMap(value => {
-        try {
-          const job = normalizers.saramin(value, checkedAt);
-          if (job.status !== 'open' || !matchesCareer(value, experience)) return [];
-          if (!matchesLocalCategory(job, category)) return [];
-          return [job];
-        } catch { invalid++; return []; }
-      });
-      if (invalid && invalid === values.length) throw new SourceError('공고 형식을 읽을 수 없어 결과를 표시하지 않았어요.', 502, 'SOURCE_FORMAT');
-      if (invalid) warnings.push(`형식을 읽지 못한 공고 ${invalid}건은 제외했어요.`);
-      return { provider, jobs, nextPage, checkedAt, warnings, pageFingerprint: values.length ? fingerprint(values.map(value => value.id)) : undefined, sourceResults: [{ id: provider, name: sources().find(source => source.id === provider).name, count: jobs.length, status: 'ok', exhausted: nextPage === null }] };
-    }, refresh);
+    return obtain(key, async () => provider === 'work24' ? loadWork24({ query, page, location, category, experience }) : loadSaramin({ query, page, location, category, experience }), refresh);
   }
   async function detail(provider, sourceId, refresh = false) {
     requireSource(provider);
-    if (!/^\d{1,12}$/.test(String(sourceId))) throw new SourceError('공고 번호가 올바르지 않아요.', 400, 'BAD_ID');
+    const idPattern = provider === 'work24' ? /^[0-9A-Za-z]{1,40}$/ : /^\d{1,12}$/;
+    if (!idPattern.test(String(sourceId))) throw new SourceError('공고 번호가 올바르지 않아요.', 400, 'BAD_ID');
     return obtain(`${provider}:${sourceId}`, async () => {
       const checkedAt = now().toISOString();
+      if (provider === 'work24') {
+        const url = new URL(WORK24_DETAIL_URL);
+        Object.entries({ authKey: env.WORK24_AUTH_KEY, callTp: 'D', returnType: 'XML', wantedAuthNo: String(sourceId), infoSvc: WORK24_INFO_SVC }).forEach(([k, v]) => url.searchParams.set(k, v));
+        const root = await readXml(url, fetcher);
+        const node = root.name === 'wantedDtl' ? root : childOf(root, 'wantedDtl');
+        if (!node) throw new SourceError('원본에서 공고를 찾을 수 없어요.', 404, 'NOT_FOUND');
+        const job = normalizeWork24(node, checkedAt);
+        if (job.id !== `work24-${sourceId}`) throw new SourceError('요청한 공고와 다른 상세 응답을 받았어요.', 502, 'SOURCE_FORMAT');
+        return { job, checkedAt };
+      }
       const url = new URL('https://oapi.saramin.co.kr/job-search');
       url.searchParams.set('access-key', env.SARAMIN_ACCESS_KEY); url.searchParams.set('id', String(sourceId));
       const raw = await readJson(url, fetcher);
       if (raw.code) throw new SourceError('사람인 API 키 또는 사용 한도를 확인해주세요.', 503, 'SOURCE_RESTRICTED');
       const value = list(object(raw.jobs).job)[0];
       if (!value) throw new SourceError('원본에서 공고를 찾을 수 없어요.', 404, 'NOT_FOUND');
-      const job = normalizers.saramin(value, checkedAt);
+      const job = normalizeSaramin(value, checkedAt);
       if (job.id !== `saramin-${sourceId}`) throw new SourceError('요청한 공고와 다른 상세 응답을 받았어요.', 502, 'SOURCE_FORMAT');
       return { job, checkedAt };
     }, refresh);

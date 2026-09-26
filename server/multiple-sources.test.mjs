@@ -40,7 +40,7 @@ test('Zighang rich text is inert and dated listings preserve their actual dates'
 
 test('the shipped service exposes no unapproved source and refuses them before network', async () => {
   let calls = 0; const service = createJobService({ env: {}, fetcher: async () => { calls++; throw new Error('must not fetch'); } });
-  assert.deepEqual(service.sources().map(source => [source.id, source.enabled]), [['saramin', false], ['wanted', false], ['jumpit', false], ['zighang', false]]);
+  assert.deepEqual(service.sources().map(source => [source.id, source.enabled]), [['saramin', false], ['work24', false], ['wanted', false], ['jumpit', false], ['zighang', false]]);
   await assert.rejects(service.search({ provider: 'jumpit' }), error => error.code === 'SOURCE_NOT_PERMITTED');
   await assert.rejects(service.search({ provider: 'zighang' }), error => error.code === 'SOURCE_NOT_PERMITTED');
   await assert.rejects(service.detail('jumpit', '202'), error => error.code === 'SOURCE_NOT_PERMITTED');

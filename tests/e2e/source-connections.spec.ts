@@ -23,7 +23,7 @@ test('settings separate official-source configuration from a real query and neve
   await expect(wantedProbe).toBeDisabled();
   await expect(wantedProbe).toHaveText('조회 대상 아님');
   await expect(page.locator('.connection-row').filter({ hasText: '원티드' })).toContainText('제공사 사전 승인이 없어');
-  await expect(page.locator('.connection-footnote')).toContainText('1일 최대 500회');
+  await expect(page.locator('.connection-footnote')).toContainText('고용24');
   expect(requests).toBe(0);
   await page.getByRole('button', { name: '사람인 공고 조회 확인', exact: true }).click();
   await expect(page.locator('.connection-result')).toContainText('조회 응답 확인');

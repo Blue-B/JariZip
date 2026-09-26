@@ -54,6 +54,7 @@ export default function SourceConnections() {
   const statusMeta = (source: SourceOption) => {
     if (source.enabled) return '공식 API 설정됨 · 아래에서 실제 응답을 확인할 수 있어요';
     if (source.id === 'saramin') return 'API 키 미설정 · 현재 자동 조회할 수 없음';
+    if (source.id === 'work24') return '인증키 미설정 · 현재 자동 조회할 수 없음';
     return '자동 조회 미사용 · 원문 사이트에서 직접 확인하고 보관';
   };
 
@@ -76,7 +77,7 @@ export default function SourceConnections() {
         </div>
       </li>;
     })}</ul>}
-    <p className="connection-footnote">사람인 공식 API는 서버에 개인 발급 키를 설정한 경우에만 사용하며, 승인된 앱·사용 범위와 제공사가 정한 1일 최대 500회 호출 한도를 따릅니다. 키만으로 재배포·자동 수집 허가가 되지는 않습니다. 다른 출처의 자동 수집 코드는 실행되지 않습니다.</p>
+    <p className="connection-footnote">사람인·고용24 공식 API는 서버에 각각 개인 발급 키(SARAMIN_ACCESS_KEY·WORK24_AUTH_KEY)를 설정한 경우에만 사용하며, 승인된 앱·사용 범위와 제공사가 정한 호출 한도를 따릅니다. 고용24 결과는 원문 링크와 출처 표시를 함께 제공해야 합니다. 키만으로 재배포·자동 수집 허가가 되지는 않습니다. 다른 출처의 자동 수집 코드는 실행되지 않습니다.</p>
     <Link to="/app/discover" className="connection-link">채용 탐색으로 이동<ArrowUpRight size={15} aria-hidden/></Link>
   </div>;
 }

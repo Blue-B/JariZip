@@ -12,9 +12,11 @@ describe('multiple source identity', () => {
     expect(sourceIdentity({ sourceUrl: 'https://jumpit.saramin.co.kr/position/456?utm_source=test' })).toEqual({ source: 'jumpit', id: '456' });
     expect(sourceIdentity({ sourceUrl: 'https://zighang.com/recruitment/12345678-1234-1234-1234-123456789abc' })).toEqual({ source: 'zighang', id: '12345678-1234-1234-1234-123456789abc' });
     expect(sourceIdentity({ sourceUrl: 'https://www.saramin.co.kr/zf_user/jobs/relay/view?rec_idx=789' })).toEqual({ source: 'saramin', id: '789' });
+    expect(sourceIdentity({ sourceUrl: 'https://www.work24.go.kr/wk/a/b/1500/empDetailAuthView.do?wantedAuthNo=KJAS002609110001&infoTypeCd=VALIDATION&infoTypeGroup=tb_workinfoworknet' })).toEqual({ source: 'work24', id: 'KJAS002609110001' });
+    expect(sourceIdentity({ sourceUrl: 'https://m.work24.go.kr/wk/a/b/1500/empDetailAuthView.do?wantedAuthNo=KJAS002609110001' })).toEqual({ source: 'work24', id: 'KJAS002609110001' });
   });
   it('rejects credentials, forged hosts, unexpected ports and invalid source IDs', () => {
-    for (const sourceUrl of ['http://jumpit.saramin.co.kr/position/123', 'https://jumpit.saramin.co.kr.evil.example/position/123', 'https://user:secret@jumpit.saramin.co.kr/position/123', 'https://jumpit.saramin.co.kr:8443/position/123', 'https://jumpit.saramin.co.kr/position/not-an-id', 'https://zighang.com/recruitment/../../private']) expect(sourceIdentity({ sourceUrl })).toBeNull();
+    for (const sourceUrl of ['http://jumpit.saramin.co.kr/position/123', 'https://jumpit.saramin.co.kr.evil.example/position/123', 'https://user:secret@jumpit.saramin.co.kr/position/123', 'https://jumpit.saramin.co.kr:8443/position/123', 'https://jumpit.saramin.co.kr/position/not-an-id', 'https://zighang.com/recruitment/../../private', 'https://www.work24.go.kr/wk/a/b/1500/empDetailAuthView.do?wantedAuthNo=has%20space', 'https://work24.go.kr.evil.example/wk/a/b/1500/empDetailAuthView.do?wantedAuthNo=KJAS1']) expect(sourceIdentity({ sourceUrl })).toBeNull();
   });
 });
 
@@ -30,8 +32,8 @@ describe('unapproved source runtime block', () => {
   });
   it('reports which saved postings may be re-queried and blocks the rest before network', async () => {
     expect(canRefreshJob({ sourceUrl: 'https://www.saramin.co.kr/zf_user/jobs/relay/view?rec_idx=789' })).toBe(true);
-    expect(canRefreshJob({ sourceUrl: 'https://www.wanted.co.kr/wd/123' })).toBe(false);
-    expect(canProbeSource('saramin')).toBe(true); expect(canProbeSource('wanted')).toBe(false);
+    expect(canRefreshJob({ sourceUrl: 'https://www.work24.go.kr/wk/a/b/1500/empDetailAuthView.do?wantedAuthNo=KJAS002609110001' })).toBe(true);
+    expect(canProbeSource('saramin')).toBe(true); expect(canProbeSource('work24')).toBe(true); expect(canProbeSource('wanted')).toBe(false);
     const mock = vi.fn();
     vi.stubGlobal('fetch', mock);
     await expect(refreshRemoteJob({ sourceUrl: 'https://www.wanted.co.kr/wd/123' })).rejects.toThrow('자동 조회를 지원하지 않아요');
@@ -56,8 +58,8 @@ describe('multi-source client boundary', () => {
     expect(result.sourceResults[1]).toMatchObject({ status: 'error', message: '시험용 제한' });
   });
   it('keeps configured and unconfigured sources distinct for display', async () => {
-    vi.stubGlobal('fetch', vi.fn(async () => Response.json({ sources: [{ id: 'jumpit', name: '점핏', enabled: false, note: '승인 없음' }, { id: 'zighang', name: '직행', enabled: false, note: '승인 없음' }, { id: 'saramin', name: '사람인', enabled: false, note: '키 필요' }, { id: 'not-a-source', name: '잘못된 출처', enabled: true, note: '' }] })));
-    expect((await fetchSources()).map(source => [source.id, source.enabled])).toEqual([['jumpit', false], ['zighang', false], ['saramin', false]]);
+    vi.stubGlobal('fetch', vi.fn(async () => Response.json({ sources: [{ id: 'jumpit', name: '점핏', enabled: false, note: '승인 없음' }, { id: 'zighang', name: '직행', enabled: false, note: '승인 없음' }, { id: 'saramin', name: '사람인', enabled: false, note: '키 필요' }, { id: 'work24', name: '고용24', enabled: true, note: '인증키 설정됨' }, { id: 'not-a-source', name: '잘못된 출처', enabled: true, note: '' }] })));
+    expect((await fetchSources()).map(source => [source.id, source.enabled])).toEqual([['jumpit', false], ['zighang', false], ['saramin', false], ['work24', true]]);
   });
   it('rejects a detail response for another posting before it can replace saved data', async () => {
     vi.stubGlobal('fetch', vi.fn(async () => Response.json({ job: makeJob(900002) })));

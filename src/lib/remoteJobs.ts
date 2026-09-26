@@ -2,12 +2,12 @@ import { parseRemoteJob } from './domain';
 import { canonicalJobUrl } from './jobSearch';
 import type { Job, WorkspaceState } from './types';
 
-export type JobSource = 'wanted' | 'saramin' | 'jumpit' | 'zighang';
+export type JobSource = 'wanted' | 'saramin' | 'jumpit' | 'zighang' | 'work24';
 export type SearchSource = JobSource | 'all';
 export interface SourceResult { id: JobSource; name: string; count: number; status: 'ok' | 'error'; message?: string; exhausted?: boolean; scannedPages?: number }
 export interface SearchResult { jobs: Job[]; nextPage: number | null; checkedAt: string; warnings: string[]; cached: boolean; total?: number; sourceResults: SourceResult[]; nextCursor?: string | null }
 export interface SourceOption { id: JobSource; name: string; enabled: boolean; note: string }
-const providers: JobSource[] = ['wanted', 'saramin', 'jumpit', 'zighang'];
+const providers: JobSource[] = ['wanted', 'saramin', 'jumpit', 'zighang', 'work24'];
 
 /**
  * Only providers with an official, permission-based API may be queried at runtime.
@@ -15,12 +15,13 @@ const providers: JobSource[] = ['wanted', 'saramin', 'jumpit', 'zighang'];
  * if a stale or tampered source list marks them enabled. No click, checkbox or env flag
  * grants that permission. This mirrors the server-side block and fails before any network.
  */
-export const APPROVED_JOB_SOURCES: readonly JobSource[] = ['saramin'];
+export const APPROVED_JOB_SOURCES: readonly JobSource[] = ['saramin', 'work24'];
 export const isApprovedSource = (source: JobSource): boolean => APPROVED_JOB_SOURCES.includes(source);
 
 /** Official public sites for normal outbound navigation. Never used for automated collection. */
 export const SOURCE_SITES: Record<JobSource, { name: string; url: string }> = {
   saramin: { name: '사람인', url: 'https://www.saramin.co.kr/' },
+  work24: { name: '고용24', url: 'https://www.work24.go.kr/' },
   wanted: { name: '원티드', url: 'https://www.wanted.co.kr/' },
   jumpit: { name: '점핏', url: 'https://jumpit.saramin.co.kr/' },
   zighang: { name: '직행', url: 'https://zighang.com/' },
@@ -86,6 +87,8 @@ export function sourceIdentity(job: Pick<Job, 'sourceUrl'>): { source: JobSource
     if (url.hostname === 'zighang.com' && zighang) return { source: 'zighang', id: zighang[1] };
     const id = url.searchParams.get('rec_idx');
     if (['www.saramin.co.kr', 'm.saramin.co.kr'].includes(url.hostname) && id && /^\d{1,12}$/.test(id)) return { source: 'saramin', id };
+    const work24 = url.searchParams.get('wantedAuthNo');
+    if (['www.work24.go.kr', 'm.work24.go.kr'].includes(url.hostname) && work24 && /^[0-9A-Za-z]{1,40}$/.test(work24)) return { source: 'work24', id: work24 };
   } catch { /* Other sources can still be imported manually. */ }
   return null;
 }

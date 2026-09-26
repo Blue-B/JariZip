@@ -69,7 +69,7 @@ test('selecting an unapproved source never issues a job request and shows the ma
   });
   await page.getByRole('button', { name: '공고 찾기', exact: true }).click();
   await expect(page.locator('.discover-optional')).toContainText('제공사의 사전 승인이 확인되지 않아');
-  await expect(page.locator('.discover-optional-list a')).toHaveCount(4);
+  await expect(page.locator('.discover-optional-list a')).toHaveCount(5);
   expect(log.filter(value => value === 'wanted')).toHaveLength(0);
   expect(log.length).toBe(before);
 });

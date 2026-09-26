@@ -79,6 +79,53 @@ export const SARAMIN_LOCATIONS = Object.freeze({
   gyeongbuk: 111000, gyeongnam: 110000, jeju: 116000,
 });
 
+/**
+ * Work24 (고용24) region codes from the official region-code workbook linked by the
+ * 채용정보목록 documentation (openapi.work.go.kr). Only the top-level (1 depth) codes are
+ * mapped; deeper district codes are intentionally absent and the UI filter is therefore a
+ * province-level request. `region` accepts multiple codes separated by `|`.
+ */
+export const WORK24_REGIONS = Object.freeze({
+  seoul: '11000', busan: '26000', daegu: '27000', incheon: '28000', daejeon: '30000',
+  ulsan: '31000', sejong: '36110', gyeonggi: '41000', chungbuk: '43000', chungnam: '44000',
+  gyeongbuk: '47000', gyeongnam: '48000', jeju: '50000', gangwon: '51000', jeonbuk: '52000',
+  // Work24 groups Gwangju with Jeonnam in region code 12000. The combined code is used for
+  // both UI filters because the source does not expose a separate Gwangju top-level code.
+  gwangju: '12000', jeonnam: '12000',
+});
+
+/**
+ * Work24 occupation codes. Each UI career category maps to one or more official 2-depth
+ * occupation codes. A category with no verified mapping is omitted and then filtered client-side.
+ */
+export const WORK24_OCCUPATIONS = Object.freeze({
+  development: Object.freeze(['022', '023', '024', '025', '026']),
+  data: Object.freeze(['021', '026']),
+  design: Object.freeze(['055', '056']),
+  planning: Object.freeze(['015', '017']),
+  marketing: Object.freeze(['015']),
+  sales: Object.freeze(['072', '073', '074', '075', '076', '078']),
+  hr: Object.freeze(['012', '017']),
+  finance: Object.freeze(['011', '01C', '01D', '018']),
+  manufacturing: Object.freeze(['091', '092', '093', '094', '095', '096', '097', '098', '099', '09A']),
+  logistics: Object.freeze(['019', '07A', '07B', '07C']),
+  service: Object.freeze(['061', '062', '063', '064', '065', '066', '067', '068', '069', '06A']),
+  education: Object.freeze(['031', '032', '033', '034', '035']),
+  medical: Object.freeze(['041', '042', '043', '044']),
+  construction: Object.freeze(['081', '082', '083', '084', '085', '086']),
+  research: Object.freeze(['021']),
+  legal: Object.freeze(['036']),
+});
+
+/** Work24 `career` codes. `N` 신입, `E` 경력(개월 범위 필수), `Z` 관계없음. */
+export const WORK24_CAREER = Object.freeze({
+  new: Object.freeze({ career: 'N' }),
+  1: Object.freeze({ career: 'E', minCareerM: 12, maxCareerM: 36 }),
+  3: Object.freeze({ career: 'E', minCareerM: 36, maxCareerM: 60 }),
+  5: Object.freeze({ career: 'E', minCareerM: 60, maxCareerM: 120 }),
+  10: Object.freeze({ career: 'E', minCareerM: 120, maxCareerM: 1200 }),
+});
+
 const index = entries => new Map(entries.map(entry => [entry.id, entry.name]));
 
 export const JOB_LOCATION_NAMES = index(JOB_LOCATIONS);

@@ -26,6 +26,8 @@
 
 정부 채용 연동은 고용24의 채용정보 Open API를 우선 검토합니다. 공식 소개는 기업회원 전용이며 로그인 후 서비스별 신청, 담당자 검토·승인, 인증키 발급 절차를 안내합니다. 키를 타인에게 양도하지 않는 조건도 있습니다. 개인 개발자가 바로 받을 수 있다고 보장하지 않습니다. 신청 주체 자격, 공개 서비스 목적, 채용정보 재표시·보관 범위는 별도로 확인합니다.
 
+목록 어댑터는 `callOpenApiSvcInfo210L01.do`(callTp=L, returnType=XML, startPage 1-based, display 최대 100), 상세 어댑터는 `callOpenApiSvcInfo210D01.do`(callTp=D, infoSvc=VALIDATION, wantedAuthNo)를 사용합니다. 서버는 발급받은 `WORK24_AUTH_KEY`가 있을 때만 고용24를 활성화합니다. 결과에는 원문 링크와 출처 표시를 함께 노출하고, 목록의 총건수는 저장 공고 수로 오인하지 않습니다. 응답은 외부 엔터티·DTD를 허용하지 않는 제한된 XML 파서로만 읽고, 본문은 다시 일반 텍스트로 변환해 렌더링합니다.
+
 공식 안내: https://www.work24.go.kr/cm/e/a/0110/selectOpenApiIntro.do
 
 ### 잡코리아
