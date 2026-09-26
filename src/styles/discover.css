@@ -178,6 +178,19 @@
 .discover-error a { display: inline-flex; align-items: center; gap: 6px; margin-top: 10px; }
 .discover-more-error { padding: 14px; margin: 14px 0; border-left: 3px solid #b45b34; background: #fbf1de; color: #6f4a24; font-size: 13px; line-height: 1.8; }
 
+/* Honest optional-source / manual-use panel shown when no official source is enabled. */
+.discover-optional { padding: 22px; margin: 18px 0; background: #f7f9fc; border: 1px solid var(--job-line, #e1e6ed); border-radius: 8px; color: var(--job-body, #33445c); }
+.discover-optional h2 { font-size: 17px; margin-bottom: 10px; }
+.discover-optional p { font-size: 13px; line-height: 1.75; max-width: 90ch; }
+.discover-optional-list { list-style: none; display: flex; flex-wrap: wrap; gap: 8px 18px; padding: 0; margin: 16px 0; }
+.discover-optional-list a { display: inline-flex; align-items: center; gap: 5px; color: var(--job-accent, #2348e8); font-size: 13px; font-weight: 600; text-decoration: none; }
+.discover-optional-list a:hover { text-decoration: underline; text-underline-offset: 3px; }
+.discover-optional-actions { display: flex; flex-wrap: wrap; gap: 10px; margin: 16px 0 4px; }
+.discover-optional-note { margin-top: 12px; font-size: 12px; color: var(--job-muted, #66758a); }
+.discover-manual-note { display: flex; align-items: flex-start; gap: 10px; padding: 14px; margin: 18px 0 0; background: #f7f9fc; border: 1px solid var(--st-line-soft, #e1e6ed); border-radius: 8px; color: var(--st-body); }
+.discover-manual-note > svg { flex-shrink: 0; margin-top: 2px; }
+.discover-manual-note p { font-size: 13px; line-height: 1.7; }
+
 /* Detail dialogs are portaled to body, outside .workspace. */
 .modal .discover-detail-status { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
 .modal .discover-company-detail { display: flex; gap: 14px; padding: 18px; margin: 22px 0; background: var(--st-paper-deep); border: 1px solid var(--st-line-soft); border-radius: 8px; color: var(--st-body); }

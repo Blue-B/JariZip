@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test';
 import { normalizeWanted } from '../../server/job-sources.mjs';
 
 const checkedAt = '2026-09-26T00:00:00.000Z';
-const source = { id: 'wanted', name: '원티드', enabled: true, note: '자동시험용 연결' };
+const source = { id: 'saramin', name: '사람인', enabled: true, note: '공식 API 시험용 연결' };
 const record = (id: number) => normalizeWanted({ id, position: `정렬시험 공고 ${id}`, company: { name: '자동시험 가상기업', industry_name: '시험용 소프트웨어' }, status: 'active', annual_from: 0, annual_to: 100 }, checkedAt);
 
 test('sort switches reset pagination without requerying, retain unknown dates and keep 30/50 browsing', async ({ page }) => {

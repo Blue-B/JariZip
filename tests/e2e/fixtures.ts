@@ -15,7 +15,9 @@ export const test = base.extend<{ seededWorkspace: void }>({
       jobSnapshot: { ...application.jobSnapshot, isDemo: false },
     }));
     // Seed on the optional guide, before the workspace mounts or searches.
-    await page.route('**/api/sources', route => route.fulfill({ json: { sources: [] } }));
+    // The default home search must not contact unapproved sources, so only the official
+    // provider is exposed and it returns no jobs in this seeded baseline.
+    await page.route('**/api/sources', route => route.fulfill({ json: { sources: [{ id: 'saramin', name: '사람인', enabled: true, note: '공식 API 시험용 연결' }] } }));
     await page.route('**/api/jobs?**', route => route.fulfill({ json: {
       jobs: [], checkedAt: '2026-09-26T00:00:00.000Z', nextCursor: null,
       nextPage: null, warnings: [], sourceResults: [],

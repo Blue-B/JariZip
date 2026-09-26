@@ -4,7 +4,7 @@ import { normalizeWanted } from '../../server/job-sources.mjs';
 const checkedAt = '2026-09-26T00:00:00.000Z';
 
 test('home opens the real search interface without a marketing gate', async ({ page }, testInfo) => {
-  const source = { id: 'wanted', name: '원티드', enabled: true };
+  const source = { id: 'saramin', name: '사람인', enabled: true, note: '공식 API 시험용 연결' };
   const job = normalizeWanted({ id: 990001, position: '홈 진입 시험용 공고', company: { name: '자동시험 가상기업' }, status: 'active' }, checkedAt);
   await page.route('**/api/sources', route => route.fulfill({ json: { sources: [source] } }));
   await page.route('**/api/jobs?**', route => route.fulfill({ json: {

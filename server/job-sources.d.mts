@@ -14,6 +14,8 @@ export function normalizeWanted(value: unknown, checkedAt: string): Job;
 export function normalizeSaramin(value: unknown, checkedAt: string): Job;
 export function normalizeJumpit(value: unknown, checkedAt: string): Job;
 export function normalizeZighang(value: unknown, checkedAt: string): Job;
+export const UNAPPROVED_SOURCES: readonly SourceProvider[];
+export const APPROVED_SOURCES: readonly SourceProvider[];
 export function sourceConfiguration(env?: Record<string, string | undefined>): SourceConfiguration[];
 export function createJobService(options?: { fetcher?: typeof fetch; env?: Record<string, string | undefined>; now?: () => Date }): {
   sources(): SourceConfiguration[];

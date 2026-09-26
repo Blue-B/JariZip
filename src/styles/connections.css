@@ -10,10 +10,14 @@
 .connection-copy .result-ready { color: #216446; }
 .connection-copy .result-error, .connection-error { color: #9c382d; }
 .connection-row > button { flex: 0 0 auto; min-height: 42px; }
+.connection-actions { display: flex; flex: 0 0 auto; flex-wrap: wrap; gap: 8px; justify-content: flex-end; }
+.connection-actions > a { display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; }
+.connection-copy .connection-manual { font-size: 13px; color: #66758a; line-height: 1.7; }
+.connection-footnote { margin-top: 18px; font-size: 12px; line-height: 1.8; color: #66758a; }
 .connection-link { display: inline-flex; align-items: center; gap: 6px; margin-top: 18px; min-height: 40px; color: #2348e8; font-size: 14px; font-weight: 650; text-decoration: none; }
 .connection-link:hover { text-decoration: underline; text-underline-offset: 4px; }
 .connection-error p { overflow-wrap: anywhere; }
 @media (max-width: 760px) {
   .connection-row { align-items: flex-start; flex-direction: column; gap: 12px; }
-  .connection-row > button { align-self: flex-start; }
+  .connection-actions { align-self: flex-start; justify-content: flex-start; }
 }

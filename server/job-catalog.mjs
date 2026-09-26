@@ -1,7 +1,6 @@
-// Shared filter catalog for the public job-search API and the browser UI.
-// Provider mappings below were verified against each source's public schema:
-// Wanted /api/chaos/search/v3/filter/navigation, Jumpit /api/common/code-initialize,
-// Zighang GET /api/recruitments/job-categories.
+// Shared filter catalog for the official job-search API and the browser UI.
+// Location codes below were verified against the source's public schema:
+// Saramin loc_mcd via the official job-search API documentation.
 // A location or category without a verified mapping is intentionally absent, and
 // the server then falls back to bounded client-side filtering.
 
@@ -72,59 +71,12 @@ export const EXPERIENCE_RANGE = Object.freeze({
 /** Upper bound used when comparing `max` windows; a posting at `careerMax` is still eligible. */
 export const EXPERIENCE_MAX_BOUND = 100;
 
-/** Wanted provincial keys verified through /api/chaos/search/v3/filter/navigation. */
-export const WANTED_LOCATIONS = Object.freeze({
-  seoul: 'seoul', gyeonggi: 'gyeonggi', incheon: 'incheon', busan: 'busan', daegu: 'daegu',
-  gwangju: 'gwangju', daejeon: 'daejeon', ulsan: 'ulsan', sejong: 'sejong', gangwon: 'gangwon',
-  chungbuk: 'n-chungcheong', chungnam: 's-chungcheong', jeonbuk: 'n-jeolla', jeonnam: 's-jeolla',
-  gyeongbuk: 'n-gyeongsang', gyeongnam: 's-gyeongsang', jeju: 'jeju',
-});
-
-/** Jumpit location codes verified through /api/common/code-initialize (전남광주 is merged in the source). */
-export const JUMPIT_LOCATIONS = Object.freeze({
+/** Saramin loc_mcd codes from the official job-search API documentation. */
+export const SARAMIN_LOCATIONS = Object.freeze({
   seoul: 101000, gyeonggi: 102000, incheon: 108000, busan: 106000, daegu: 104000,
   gwangju: 112000, daejeon: 105000, ulsan: 107000, sejong: 118000, gangwon: 109000,
   chungbuk: 114000, chungnam: 115000, jeonbuk: 113000, jeonnam: 112000,
   gyeongbuk: 111000, gyeongnam: 110000, jeju: 116000,
-});
-
-/**
- * Jumpit jobCategory ids verified through /api/common/code-initialize. Jumpit has no
- * marketing/HR/finance category, so those stay unmapped and fall back to bounded filtering.
- */
-export const JUMPIT_CATEGORIES = Object.freeze({
-  development: Object.freeze([1, 2, 3, 4, 16, 18, 5, 6, 7, 19, 9, 10, 11, 12, 13, 15, 17, 20, 21, 22]),
-  data: Object.freeze([8, 19]),
-  design: Object.freeze([17, 20]),
-  planning: Object.freeze([12]),
-  research: Object.freeze([8, 13]),
-});
-
-/** Zighang depth-one keys verified through /api/recruitments/job-categories. */
-export const ZIGHANG_CATEGORIES = Object.freeze({
-  development: Object.freeze(['IT_개발', 'AI_데이터', '게임']),
-  data: Object.freeze(['AI_데이터']),
-  design: Object.freeze(['디자인']),
-  planning: Object.freeze(['기획_전략_경영', '상품기획_MD']),
-  marketing: Object.freeze(['마케팅_광고_홍보']),
-  sales: Object.freeze(['영업']),
-  hr: Object.freeze(['인사_노무_HRD_총무']),
-  finance: Object.freeze(['회계_세무_재무', '증권_운용', '은행_보험_카드_캐피탈']),
-  manufacturing: Object.freeze(['생산_기능']),
-  logistics: Object.freeze(['무역_물류_유통', '운송_배송']),
-  service: Object.freeze(['서비스', '식음료', '고객상담_TM']),
-  education: Object.freeze(['교육']),
-  medical: Object.freeze(['의료_보건']),
-  construction: Object.freeze(['건설_건축']),
-  research: Object.freeze(['엔지니어링_연구_RND']),
-  legal: Object.freeze(['법률_법무_컴플라이언스']),
-});
-
-/** Zighang region names (depth-one) verified through the same category endpoint. */
-export const ZIGHANG_REGIONS = Object.freeze({
-  gwangju: '광주', daejeon: '대전', ulsan: '울산', sejong: '세종', gangwon: '강원',
-  chungbuk: '충북', chungnam: '충남', jeonbuk: '전북', jeonnam: '전남',
-  gyeongbuk: '경북', gyeongnam: '경남', jeju: '제주',
 });
 
 const index = entries => new Map(entries.map(entry => [entry.id, entry.name]));

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { describeStorageError, maxVersion, nextId, practiceFor, stageCounts } from './store';
+import { conflictFileName, describeStorageError, maxVersion, nextId, practiceFor, stageCounts } from './store';
 import { createDemoState, createEmptyState } from './seed';
 
 describe('stageCounts', () => {
@@ -109,5 +109,14 @@ describe('describeStorageError', () => {
     expect(describeStorageError('QuotaExceededError').quota).toBe(true);
     expect(describeStorageError(undefined).quota).toBe(false);
     expect(describeStorageError(null).quota).toBe(false);
+  });
+});
+
+// The losing tab exports its unsaved snapshot under a clearly distinct name.
+describe('conflictFileName', () => {
+  it('names the conflict export after the date and never as a normal backup', () => {
+    const name = conflictFileName(new Date('2026-03-09T12:00:00+09:00'));
+    expect(name).toBe('jarizip-conflict-2026-03-09.json');
+    expect(name).not.toMatch(/backup/);
   });
 });

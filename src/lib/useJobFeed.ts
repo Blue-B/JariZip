@@ -3,10 +3,12 @@ import { canonicalJobUrl } from './jobSearch';
 import type { Job } from './types';
 import { searchRemoteJobs, type SearchSource, type SearchResult } from './remoteJobs';
 
-interface Filters { source: SearchSource; query: string; location: string; category: string; experience: string; revision: number }
+interface Filters { source: SearchSource; query: string; location: string; category: string; experience: string; revision: number; paused?: boolean }
 const moreAvailable = (result: SearchResult | null) => result !== null && (result.nextCursor === undefined ? result.nextPage !== null : result.nextCursor !== null);
 
-/** Keep source batches in an ephemeral buffer; the view chooses 30/50-row windows. */
+/** Keep source batches in an ephemeral buffer; the view chooses 30/50-row windows.
+ *  When `paused` is set (no officially approved source is enabled) no job network request
+ *  is made at all, so the home screen never contacts an unapproved endpoint. */
 export function useJobFeed(filters: Filters) {
   const [result, setResult] = useState<SearchResult | null>(null);
   const current = useRef<SearchResult | null>(null);
@@ -27,6 +29,7 @@ export function useJobFeed(filters: Filters) {
     const controller = new AbortController(); request.current = controller; busy.current = true;
     current.current = null; resolvedFilters.current = null; batch.current = 0;
     setLoading(true); setLoadingMore(false); setError(''); setMoreError(''); setResult(null); setAdded(0);
+    if (filters.paused) { resolvedFilters.current = filters; busy.current = false; setLoading(false); return () => controller.abort(); }
     void searchRemoteJobs(filters.source, filters.query, filters.location, 0, controller.signal, filters.revision > 0, filters.category, filters.experience, 'start')
       .then(value => {
         if (controller.signal.aborted || version !== generation.current) return;
@@ -43,6 +46,7 @@ export function useJobFeed(filters: Filters) {
    * Empty/failed batches stop the loop; retries preserve the exact continuation.
    * Four bounded calls avoid unbounded requests under very sparse filters. */
   const loadThrough = useCallback(async (target: number): Promise<number> => {
+    if (filters.paused) return 0;
     if (busy.current || !current.current) return current.current?.jobs.length ?? 0;
     if (current.current.jobs.length >= target || !moreAvailable(current.current)) return current.current.jobs.length;
     busy.current = true; setLoadingMore(true); setMoreError('');
@@ -70,5 +74,5 @@ export function useJobFeed(filters: Filters) {
   }, [filters]);
   const hasMore = moreAvailable(result);
   const canAutoLoad = hasMore && !loading && !loadingMore && !moreError && added > 0 && !result?.sourceResults.some(source => source.status === 'error');
-  return { result, readyForFilters: resolvedFilters.current === filters, loading, loadingMore, error, moreError, added, hasMore, canAutoLoad, loadThrough };
+  return { result, paused: Boolean(filters.paused), readyForFilters: resolvedFilters.current === filters, loading, loadingMore, error, moreError, added, hasMore, canAutoLoad, loadThrough };
 }

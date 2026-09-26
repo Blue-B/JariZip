@@ -80,7 +80,7 @@ export default function Settings() {
             <Button onClick={() => input.current?.click()} disabled={importing}><Upload size={17}/>{importing ? '백업 확인 중' : '백업 파일 불러오기'}</Button>
             <input type="file" accept=".json,application/json" ref={input} className="sr-only" aria-label="백업 파일 선택" onChange={e => e.target.files?.[0] && void readBackup(e.target.files[0])}/>
           </div>
-          <p className="field-hint">JSON 파일에 원본 서류와 음성 답변이 포함돼요. 암호화되지 않으므로 안전한 곳에 보관해주세요.</p>
+          <p className="field-hint">JSON 백업은 원본 서류와 음성을 포함해 전체 40MB까지 내보내고 불러올 수 있어요. 파일 원본이 인코딩되므로 원래 용량보다 커질 수 있어요. 암호화되지 않으니 안전한 곳에 보관해주세요.</p>
         </section>
 
         <section className="panel settings-section">
@@ -101,7 +101,7 @@ export default function Settings() {
           <div><Check size={14}/>파일 원본도 로컬에 보관</div><div><Check size={14}/>제출본 버전을 따로 기억</div><div><Check size={14}/>백업으로 다른 기기에 이동</div>
           <small>브라우저 저장소 자체는 암호화 보관함이 아니에요. 공용 기기에서는 개인정보를 넣지 않는 편이 좋아요.</small>
         </div>
-        <Link to="/" className="about-product-link"><span>JariZip이 처음이라면</span><strong>제품 소개 둘러보기<ArrowUpRight size={17}/></strong></Link>
+        <Link to="/about" className="about-product-link"><span>JariZip이 처음이라면</span><strong>이용 안내 보기<ArrowUpRight size={17}/></strong></Link>
       </aside>
     </div>
     {reset && <ConfirmDialog title="비우고 내 자료로 시작할까요?" description="현재 공고, 서류 원본, 지원 기록, 음성 답변과 프로필이 모두 삭제돼요. 백업 파일이 없으면 되돌릴 수 없어요." confirmLabel="비우고 시작" danger onClose={() => setReset(false)} onConfirm={() => { update(() => createEmptyState()); setReset(false); notify('워크스페이스를 비웠어요.'); }}/>}

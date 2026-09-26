@@ -1,6 +1,8 @@
 // Read-only, bounded adapters. No login, cookies, CAPTCHA bypass or arbitrary URL proxy.
+// Official, permission-based sources only. The normalizers below are kept inert for fixture
+// and schema tests but the unofficial Wanted/Jumpit/Zighang endpoints are never called here.
 import { fingerprint, MAX_PAGE, streamJobs } from './job-stream.mjs';
-import { isJobLocation, isJobCategory, isJobExperience, JOB_LOCATION_NAMES, WANTED_LOCATIONS, JUMPIT_LOCATIONS, JUMPIT_CATEGORIES, ZIGHANG_CATEGORIES } from './job-catalog.mjs';
+import { isJobLocation, isJobCategory, isJobExperience, SARAMIN_LOCATIONS } from './job-catalog.mjs';
 
 export class SourceError extends Error {
   constructor(message, status = 502, code = 'SOURCE_ERROR') { super(message); this.status = status; this.code = code; }
@@ -118,12 +120,20 @@ export function normalizeZighang(value, checkedAt) {
   };
 }
 
+/** Unofficial endpoints that require prior written permission. Never called automatically. */
+export const UNAPPROVED_SOURCES = Object.freeze(['wanted', 'jumpit', 'zighang']);
+/** Providers with an official, permission-based API wired into this server. */
+export const APPROVED_SOURCES = Object.freeze(['saramin']);
+
 export function sourceConfiguration(env = process.env) {
+  const saraminConfigured = Boolean(env.SARAMIN_ACCESS_KEY);
   return [
-    { id: 'wanted', name: '원티드', enabled: true, note: '키 없이 공개 공고 조회 · 공식 제휴 API 아님' },
-    { id: 'jumpit', name: '점핏', enabled: true, note: '키 없이 개발·IT 공고 조회 · 공개 응답 연결' },
-    { id: 'zighang', name: '직행', enabled: true, note: '키 없이 다양한 직무 공고 조회 · 공개 응답 연결' },
-    { id: 'saramin', name: '사람인', enabled: Boolean(env.SARAMIN_ACCESS_KEY), note: env.SARAMIN_ACCESS_KEY ? '공식 API 연결 설정됨' : '서버의 SARAMIN_ACCESS_KEY 설정 필요' },
+    { id: 'saramin', name: '사람인', enabled: saraminConfigured, note: saraminConfigured
+      ? '공식 채용 정보 API · 서버에 개인 발급 키 설정됨. 제공사 승인 범위와 1일 500회 공식 한도 안에서만 사용하세요.'
+      : '공식 채용 정보 API · 서버에 발급받은 SARAMIN_ACCESS_KEY를 설정해야 사용할 수 있어요. 키 발급·앱별 승인·사용 범위는 제공사 조건을 따릅니다.' },
+    { id: 'wanted', name: '원티드', enabled: false, note: '공식 제휴 API 아님 · 제공사 사전 승인 없이 자동 수집하지 않아요. 원문 사이트에서 직접 확인하고 보관해주세요.' },
+    { id: 'jumpit', name: '점핏', enabled: false, note: '공식 제휴 API 아님 · 제공사 사전 승인 없이 자동 수집하지 않아요. 원문 사이트에서 직접 확인하고 보관해주세요.' },
+    { id: 'zighang', name: '직행', enabled: false, note: '공식 제휴 API 아님 · 제공사 사전 승인 없이 자동 수집하지 않아요. 원문 사이트에서 직접 확인하고 보관해주세요.' },
   ];
 }
 
@@ -163,19 +173,13 @@ const categoryPatterns = {
   research: /연구|연구원|research|\bR&D\b/i, legal: /법률|법무|변호사|컴플라이언스|legal/i,
 };
 function matchesLocalCategory(job, category) { return category === 'all' || categoryPatterns[category].test([job.title, job.role, ...job.skills].join(' ')); }
-function matchesCareer(raw, provider, experience) {
+function matchesCareer(raw, experience) {
   if (experience === 'all') return true;
   const years = experience === 'new' ? 0 : Number(experience);
-  let min, max;
-  if (provider === 'wanted') { min = raw.annual_from; max = raw.annual_to; }
-  else if (provider === 'jumpit') { min = raw.minCareer; max = raw.maxCareer; if (years === 0 && raw.newcomer === true) return true; }
-  else if (provider === 'zighang') { min = raw.careerMin; max = raw.careerMax; }
-  else {
-    const level = object(object(raw.position)['experience-level']);
-    if (Number(level.code) === 0) return true;
-    if (years === 0) return Number(level.code) === 1 || Number(level.code) === 3;
-    min = level.min; max = level.max;
-  }
+  const level = object(object(raw.position)['experience-level']);
+  if (Number(level.code) === 0) return true;
+  if (years === 0) return Number(level.code) === 1 || Number(level.code) === 3;
+  const min = level.min, max = level.max;
   return Number.isFinite(min) && min <= years && (!Number.isFinite(max) || max >= years);
 }
 const normalizers = { wanted: normalizeWanted, saramin: normalizeSaramin, jumpit: normalizeJumpit, zighang: normalizeZighang };
@@ -196,9 +200,10 @@ export function createJobService({ fetcher = fetch, env = process.env, now = () 
   const sources = () => sourceConfiguration(env);
   function requireSource(provider) {
     if (!Object.hasOwn(normalizers, provider)) throw new SourceError('지원하지 않는 공고 출처예요.', 400, 'BAD_SOURCE');
+    if (!APPROVED_SOURCES.includes(provider)) throw new SourceError('이 출처는 제공사의 사전 승인 없이 자동으로 조회하지 않아요. 원문 사이트에서 직접 확인해주세요.', 403, 'SOURCE_NOT_PERMITTED');
     if (provider === 'saramin' && !env.SARAMIN_ACCESS_KEY) throw new SourceError('사람인은 서버에 발급받은 API 키를 설정해야 해요.', 503, 'KEY_REQUIRED');
   }
-  async function search({ provider = 'wanted', query = '', page = 0, location = 'all', category = 'all', experience = 'all', refresh = false, cursor } = {}) {
+  async function search({ provider = 'all', query = '', page = 0, location = 'all', category = 'all', experience = 'all', refresh = false, cursor } = {}) {
     if (provider !== 'all') requireSource(provider);
     if (typeof query !== 'string' || query.length > 120 || !Number.isInteger(page) || page < 0 || page > MAX_PAGE || !isJobLocation(location) || !isJobCategory(category) || !isJobExperience(experience)) throw new SourceError('검색 조건을 확인해주세요.', 400, 'BAD_QUERY');
     if (cursor !== undefined) return streamJobs({ provider, query, page, location, category, experience, refresh }, cursor, { sources, search, SourceError, now });
@@ -206,6 +211,7 @@ export function createJobService({ fetcher = fetch, env = process.env, now = () 
     // Do not cache aggregate failures for a minute: each successful provider has its own cache.
     if (provider === 'all') {
       const enabled = sources().filter(source => source.enabled);
+      if (!enabled.length) throw new SourceError('사용하도록 설정된 공식 출처가 없어요. 원문 사이트에서 직접 확인해 저장하거나, 사람인 공식 API 키를 서버에 설정해주세요.', 409, 'NO_ENABLED_SOURCE');
       const results = await Promise.allSettled(enabled.map(source => search({ provider: source.id, query, page, location, category, experience, refresh })));
       const successful = results.filter(result => result.status === 'fulfilled').map(result => result.value);
       if (!successful.length) throw new SourceError('연결한 모든 출처의 조회에 실패했어요. 출처별 조회 또는 설정에서 원인을 확인해주세요.', 503, 'ALL_SOURCES_FAILED');
@@ -221,62 +227,25 @@ export function createJobService({ fetcher = fetch, env = process.env, now = () 
       };
     }
     return obtain(key, async () => {
-      const checkedAt = now().toISOString(), warnings = []; let raw, values, nextPage;
-      const years = experience === 'all' ? '-1' : experience === 'new' ? '0' : experience;
-      if (provider === 'wanted') {
-        const url = new URL(`https://www.wanted.co.kr/api/v4/${query.trim() ? 'search' : 'jobs'}`);
-        Object.entries({ country: 'kr', job_sort: 'job.latest_order', limit: '20', offset: String(page * 20), years, locations: WANTED_LOCATIONS[location] || 'all' }).forEach(([k, v]) => url.searchParams.set(k, v));
-        if (query.trim()) { url.searchParams.set('query', query.trim()); url.searchParams.set('result_items', 'jobs'); }
-        raw = await readJson(url, fetcher); values = query.trim() ? object(raw.data).jobs : raw.data;
-        // A known end-of-results envelope, not a blanket fallback for schema errors.
-        if (raw.data === null && object(raw.links).next === null && Object.hasOwn(raw.links, 'next')) values = [];
-        nextPage = object(raw.links).next && page < MAX_PAGE ? page + 1 : null;
-        warnings.push('원티드가 제공하는 최신 등록순입니다. 게시일은 응답에 없어 임의로 표시하지 않아요.');
-        if (category !== 'all') warnings.push('원티드 분야 조건은 현재 출처 페이지의 제목·기술명에서 분류합니다. 전체 공고를 빠짐없이 검색한 결과는 아니며, 다음 페이지나 직행 출처도 확인해주세요.');
-      } else if (provider === 'jumpit') {
-        if (category !== 'all' && !JUMPIT_CATEGORIES[category]) return { provider, jobs: [], checkedAt, nextPage: null, warnings: ['점핏은 개발·IT 중심 출처로 선택한 분야의 검색 분류를 제공하지 않아요. 다른 출처의 결과를 확인해주세요.'], sourceResults: [{ id: provider, name: '점핏', count: 0, status: 'ok' }] };
-        const url = new URL('https://jumpit-api.saramin.co.kr/api/positions');
-        url.searchParams.set('sort', 'reg_dt'); url.searchParams.set('highlight', 'false'); url.searchParams.set('page', String(page + 1));
-        if (query.trim()) url.searchParams.set('keyword', query.trim());
-        if (location !== 'all') url.searchParams.set('locationTag', String(JUMPIT_LOCATIONS[location]));
-        if (experience !== 'all') url.searchParams.set('career', years);
-        for (const id of JUMPIT_CATEGORIES[category] || []) url.searchParams.append('jobCategory', String(id));
-        raw = await readJson(url, fetcher); values = object(raw.result).positions;
-        // Jumpit's public endpoint returns 16 positions per 1-based page.
-        nextPage = (page + 1) * 16 < Number(object(raw.result).totalCount) && page < MAX_PAGE ? page + 1 : null;
-        warnings.push('점핏의 공개 개발·IT 공고를 조회합니다. 출처의 모집 기간·상시채용 표시를 기준으로 접수 상태를 기록합니다.');
-      } else if (provider === 'zighang') {
-        const url = new URL('https://api.zighang.com/api/recruitments/v4');
-        Object.entries({ page: String(page), size: '20', sortCondition: 'LATEST', orderCondition: 'DESC' }).forEach(([k, v]) => url.searchParams.set(k, v));
-        if (query.trim()) url.searchParams.set('keyword', query.trim());
-        if (location !== 'all') url.searchParams.append('regions', JOB_LOCATION_NAMES.get(location));
-        for (const id of ZIGHANG_CATEGORIES[category] || []) url.searchParams.append('depthOnes', id);
-        if (experience !== 'all') { url.searchParams.set('careerMin', years); url.searchParams.set('careerMax', years); url.searchParams.set('includeCareerOpen', 'true'); }
-        raw = await readJson(url, fetcher);
-        if (raw.success !== true) throw new SourceError('직행이 정상적인 공고 응답을 제공하지 않았어요.', 502, 'SOURCE_FORMAT');
-        values = object(raw.data).content;
-        nextPage = object(raw.data).last === false && page < MAX_PAGE ? page + 1 : null;
-        warnings.push('직행에 모인 공고입니다. 여러 사이트에 같은 채용이 등록되어 있을 수 있으며, 실제 지원 전에는 원문을 확인해주세요.');
-      } else {
-        const url = new URL('https://oapi.saramin.co.kr/job-search');
-        Object.entries({ 'access-key': env.SARAMIN_ACCESS_KEY, keywords: query.trim(), count: '20', start: String(page), sort: 'pd', fields: 'posting-date,expiration-date' }).forEach(([k, v]) => url.searchParams.set(k, v));
-        if (location !== 'all') url.searchParams.set('loc_mcd', String(JUMPIT_LOCATIONS[location]));
-        raw = await readJson(url, fetcher);
-        if (raw.code || !raw.jobs) throw new SourceError('사람인 API 키, 권한 또는 사용 한도를 확인해주세요.', 503, 'SOURCE_RESTRICTED');
-        values = list(raw.jobs.job); nextPage = (page + 1) * 20 < Number(raw.jobs.total) && page < MAX_PAGE ? page + 1 : null;
-        warnings.push('사람인 공식 API 제공 요약입니다. 전체 본문은 원본 사이트에서 확인해주세요.');
-        if (category !== 'all' || experience !== 'all') warnings.push('사람인 분야·경력은 현재 출처 페이지에서 조건을 적용합니다. 전체 검색 결과의 총건수와는 다릅니다.');
-      }
+      const checkedAt = now().toISOString(), warnings = [];
+      const url = new URL('https://oapi.saramin.co.kr/job-search');
+      Object.entries({ 'access-key': env.SARAMIN_ACCESS_KEY, keywords: query.trim(), count: '20', start: String(page), sort: 'pd', fields: 'posting-date,expiration-date' }).forEach(([k, v]) => url.searchParams.set(k, v));
+      if (location !== 'all') url.searchParams.set('loc_mcd', String(SARAMIN_LOCATIONS[location]));
+      const raw = await readJson(url, fetcher);
+      if (raw.code || !raw.jobs) throw new SourceError('사람인 API 키, 권한 또는 사용 한도를 확인해주세요.', 503, 'SOURCE_RESTRICTED');
+      const values = list(raw.jobs.job);
+      let nextPage = (page + 1) * 20 < Number(raw.jobs.total) && page < MAX_PAGE ? page + 1 : null;
+      warnings.push('사람인 공식 API 제공 요약입니다. 전체 본문은 원본 사이트에서 확인해주세요.');
+      if (category !== 'all' || experience !== 'all') warnings.push('사람인 분야·경력은 현재 출처 페이지에서 조건을 적용합니다. 전체 검색 결과의 총건수와는 다릅니다.');
       if (!Array.isArray(values) || values.length > 20) throw new SourceError('공고 목록 응답 형식이 바뀌었어요.', 502, 'SOURCE_FORMAT');
       if (values.length === 0) nextPage = null;
       if (page === MAX_PAGE && values.length) warnings.push('안전한 조회 범위의 끝에 도달했어요. 조건을 좁혀 다시 검색해주세요.');
       let invalid = 0;
       const jobs = values.flatMap(value => {
         try {
-          const job = normalizers[provider](value, checkedAt);
-          if (job.status !== 'open' || !matchesCareer(value, provider, experience)) return [];
-          if (['wanted', 'saramin'].includes(provider) && !matchesLocalCategory(job, category)) return [];
-          if (provider === 'jumpit' && ['gwangju', 'jeonnam'].includes(location) && !job.location.includes(JOB_LOCATION_NAMES.get(location))) return [];
+          const job = normalizers.saramin(value, checkedAt);
+          if (job.status !== 'open' || !matchesCareer(value, experience)) return [];
+          if (!matchesLocalCategory(job, category)) return [];
           return [job];
         } catch { invalid++; return []; }
       });
@@ -287,25 +256,17 @@ export function createJobService({ fetcher = fetch, env = process.env, now = () 
   }
   async function detail(provider, sourceId, refresh = false) {
     requireSource(provider);
-    if (!(provider === 'zighang' ? UUID.test(sourceId) : /^\d{1,12}$/.test(String(sourceId)))) throw new SourceError('공고 번호가 올바르지 않아요.', 400, 'BAD_ID');
+    if (!/^\d{1,12}$/.test(String(sourceId))) throw new SourceError('공고 번호가 올바르지 않아요.', 400, 'BAD_ID');
     return obtain(`${provider}:${sourceId}`, async () => {
-      const checkedAt = now().toISOString(); let raw, value;
-      if (provider === 'wanted') { raw = await readJson(`https://www.wanted.co.kr/api/v4/jobs/${sourceId}`, fetcher); value = raw.job; }
-      else if (provider === 'jumpit') { raw = await readJson(`https://jumpit-api.saramin.co.kr/api/position/${sourceId}`, fetcher); value = raw.result; }
-      else if (provider === 'zighang') {
-        raw = await readJson(`https://api.zighang.com/api/recruitments/${sourceId}`, fetcher);
-        if (raw.success !== true) throw new SourceError('직행 공고를 읽을 수 없어요.', 502, 'SOURCE_FORMAT');
-        value = raw.data;
-      } else {
-        const url = new URL('https://oapi.saramin.co.kr/job-search');
-        url.searchParams.set('access-key', env.SARAMIN_ACCESS_KEY); url.searchParams.set('id', String(sourceId));
-        raw = await readJson(url, fetcher);
-        if (raw.code) throw new SourceError('사람인 API 키 또는 사용 한도를 확인해주세요.', 503, 'SOURCE_RESTRICTED');
-        value = list(object(raw.jobs).job)[0];
-        if (!value) throw new SourceError('원본에서 공고를 찾을 수 없어요.', 404, 'NOT_FOUND');
-      }
-      const job = normalizers[provider](value, checkedAt);
-      if (job.id !== `${provider}-${sourceId}`) throw new SourceError('요청한 공고와 다른 상세 응답을 받았어요.', 502, 'SOURCE_FORMAT');
+      const checkedAt = now().toISOString();
+      const url = new URL('https://oapi.saramin.co.kr/job-search');
+      url.searchParams.set('access-key', env.SARAMIN_ACCESS_KEY); url.searchParams.set('id', String(sourceId));
+      const raw = await readJson(url, fetcher);
+      if (raw.code) throw new SourceError('사람인 API 키 또는 사용 한도를 확인해주세요.', 503, 'SOURCE_RESTRICTED');
+      const value = list(object(raw.jobs).job)[0];
+      if (!value) throw new SourceError('원본에서 공고를 찾을 수 없어요.', 404, 'NOT_FOUND');
+      const job = normalizers.saramin(value, checkedAt);
+      if (job.id !== `saramin-${sourceId}`) throw new SourceError('요청한 공고와 다른 상세 응답을 받았어요.', 502, 'SOURCE_FORMAT');
       return { job, checkedAt };
     }, refresh);
   }

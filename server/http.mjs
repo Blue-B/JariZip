@@ -1,7 +1,7 @@
 import { createServer } from 'node:http';
 import { readFile, realpath, stat } from 'node:fs/promises';
 import { resolve, sep, extname } from 'node:path';
-import { createJobService, SourceError } from './job-sources.mjs';
+import { createJobService, SourceError, APPROVED_SOURCES } from './job-sources.mjs';
 
 const json = (res, status, value) => {
   res.writeHead(status, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff' });
@@ -30,13 +30,18 @@ export function createApiHandler({ env = process.env, service = createJobService
       if (path === '/api/sources') { json(res, 200, { sources: service.sources(), personalDocumentsSent: false }); return true; }
       if (path === '/api/jobs') {
         const params = url.searchParams;
+        const source = params.get('source') || 'all';
+        if (source !== 'all' && !APPROVED_SOURCES.includes(source)) throw new SourceError('이 출처는 제공사의 사전 승인 없이 자동으로 조회하지 않아요. 원문 사이트에서 직접 확인해주세요.', 403, 'SOURCE_NOT_PERMITTED');
         const page = params.get('page') || '0';
         if (!/^\d{1,4}$/.test(page)) throw new SourceError('페이지 번호가 올바르지 않아요.', 400, 'BAD_QUERY');
-        const result = await service.search({ provider: params.get('source') || 'wanted', query: params.get('q') || '', page: Number(page), location: params.get('location') || 'all', category: params.get('category') || 'all', experience: params.get('experience') || 'all', refresh: params.get('refresh') === '1', cursor: params.has('cursor') ? params.get('cursor') : undefined });
+        const result = await service.search({ provider: source, query: params.get('q') || '', page: Number(page), location: params.get('location') || 'all', category: params.get('category') || 'all', experience: params.get('experience') || 'all', refresh: params.get('refresh') === '1', cursor: params.has('cursor') ? params.get('cursor') : undefined });
         json(res, 200, result); return true;
       }
       const match = /^\/api\/jobs\/(wanted|saramin|jumpit|zighang)\/([0-9a-f-]{1,36})$/i.exec(path);
-      if (match) { json(res, 200, await service.detail(match[1], match[2], url.searchParams.get('refresh') === '1')); return true; }
+      if (match) {
+        if (!APPROVED_SOURCES.includes(match[1])) throw new SourceError('이 출처는 제공사의 사전 승인 없이 자동으로 조회하지 않아요. 원문 사이트에서 직접 확인해주세요.', 403, 'SOURCE_NOT_PERMITTED');
+        json(res, 200, await service.detail(match[1], match[2], url.searchParams.get('refresh') === '1')); return true;
+      }
       throw new SourceError('없는 API 경로예요.', 404, 'NOT_FOUND');
     } catch (error) {
       json(res, error instanceof SourceError ? error.status : 500, { error: { code: error instanceof SourceError ? error.code : 'SERVER_ERROR', message: error instanceof SourceError ? error.message : '요청을 처리하지 못했어요.' } });
@@ -45,7 +50,7 @@ export function createApiHandler({ env = process.env, service = createJobService
   };
 }
 
-const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.json': 'application/json', '.svg': 'image/svg+xml', '.avif': 'image/avif', '.png': 'image/png', '.webp': 'image/webp', '.woff2': 'font/woff2', '.woff': 'font/woff', '.wasm': 'application/wasm', '.ico': 'image/x-icon', '.map': 'application/json' };
+const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.mjs': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.json': 'application/json', '.svg': 'image/svg+xml', '.avif': 'image/avif', '.png': 'image/png', '.webp': 'image/webp', '.woff2': 'font/woff2', '.woff': 'font/woff', '.wasm': 'application/wasm', '.ico': 'image/x-icon', '.map': 'application/json' };
 
 export function createAppServer({ directory = resolve('dist'), service, env = process.env } = {}) {
   const api = createApiHandler({ service, env });

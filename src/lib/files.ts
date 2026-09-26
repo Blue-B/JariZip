@@ -314,14 +314,22 @@ export function backupFileName(date = new Date()): string {
   return `jarizip-backup-${year}-${month}-${day}.json`;
 }
 
+/** Prepare exactly the bytes we allow the importer to restore. Check UTF-8 bytes,
+ * not JS string length: Korean text can use multiple bytes per character.
+ * Never truncate originals or silently emit an unrestorable "full backup".
+ */
+export function prepareBackupBlob(state: WorkspaceState): Blob {
+  const validated = validateBackup(state);
+  const blob = new Blob([buildBackupJson(validated)], { type: 'application/json;charset=utf-8' });
+  if (blob.size > MAX_BACKUP_BYTES) {
+    throw new Error('전체 백업이 40MB를 넘어서 만들지 않았어요. 저장된 자료는 그대로 있어요. 서류 보관함에서 원본을 따로 내려받아 보관한 뒤, 필요 없는 자료를 정리해주세요.');
+  }
+  return blob;
+}
+
 /** Validates and downloads a full backup, including document originals. */
 export function exportBackup(state: WorkspaceState): void {
-  const validated = validateBackup(state);
-  const json = buildBackupJson(validated);
-  triggerDownload(
-    new Blob([json], { type: 'application/json;charset=utf-8' }),
-    backupFileName(),
-  );
+  triggerDownload(prepareBackupBlob(state), backupFileName());
 }
 
 function decodeTextFile(
