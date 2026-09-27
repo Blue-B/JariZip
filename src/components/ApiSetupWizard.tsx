@@ -34,52 +34,12 @@ import {
   type ApiProvider,
   type JarizipDesktopBridge,
 } from '../lib/desktopBridge';
+import { PROVIDER_GUIDES } from '../lib/apiGuides';
 import '../styles/api-setup.css';
-
-interface ProviderGuide {
-  id: ApiProvider;
-  name: string;
-  org: string;
-  envKey: string;
-  recommended: boolean;
-  page: string;
-  pageLabel: string;
-  steps: string[];
-}
 
 /** Official key-issuance pages only. The wizard opens these in the system
  *  browser; it never contacts a job site itself and never automates a signup. */
-const PROVIDERS: Record<ApiProvider, ProviderGuide> = {
-  work24: {
-    id: 'work24',
-    name: '고용24',
-    org: '한국고용정보원',
-    envKey: 'WORK24_AUTH_KEY',
-    recommended: true,
-    page: 'https://www.work24.go.kr/cm/e/a/0110/selectOpenApiIntro.do',
-    pageLabel: '고용24 Open API 안내 열기',
-    steps: [
-      '고용24에 기업회원으로 로그인해요.',
-      'Open API 서비스 이용을 신청해요.',
-      '담당자 심사를 거쳐 인증키를 발급받아요.',
-      '발급받은 인증키를 아래에 붙여넣어요.',
-    ],
-  },
-  saramin: {
-    id: 'saramin',
-    name: '사람인',
-    org: '사람인',
-    envKey: 'SARAMIN_ACCESS_KEY',
-    recommended: false,
-    page: 'https://oapi.saramin.co.kr/guide/info',
-    pageLabel: '사람인 API 안내 열기',
-    steps: [
-      '사람인 채용정보 API 이용을 신청해요.',
-      '승인을 받은 뒤 앱별 access-key를 발급받아요.',
-      '발급받은 access-key를 아래에 붙여넣어요.',
-    ],
-  },
-};
+const PROVIDERS = PROVIDER_GUIDES;
 
 type Stage = 'choose' | 'connect' | 'verifying' | 'done' | 'overview';
 

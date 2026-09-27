@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { normalizeWanted } from '../../server/job-sources.mjs';
-import { canProbeSource, canRefreshJob, fetchSources, probeSource, refreshRemoteJob, searchRemoteJobs, sourceIdentity, SOURCE_SITES } from './remoteJobs';
+import { canProbeSource, canRefreshJob, clearCredential, fetchCredentialStatus, fetchSources, probeSource, refreshRemoteJob, saveCredential, searchRemoteJobs, sourceIdentity, SOURCE_SITES } from './remoteJobs';
 
 const checkedAt = '2026-09-26T00:00:00.000Z';
 const makeJob = (id = 900001) => normalizeWanted({ id, company: { name: '시험용 가상기업' }, position: '시험용 공고', status: 'active', hidden: false, annual_from: 0, annual_to: 3, address: { location: '부산' } }, checkedAt);
@@ -70,5 +70,55 @@ describe('multi-source client boundary', () => {
     await expect(searchRemoteJobs('all', '', 'all', 0)).rejects.toThrow('목록 형식');
     vi.stubGlobal('fetch', vi.fn(async () => Response.json({ jobs: [{ ...makeJob(), isDemo: true }], checkedAt })));
     await expect(searchRemoteJobs('all', '', 'all', 0)).rejects.toThrow();
+  });
+});
+
+describe('browser-mode credential client', () => {
+  it('reads only status booleans and never a key value', async () => {
+    const mock = vi.fn(async () => Response.json({ providers: [
+      { provider: 'work24', configured: true },
+      { provider: 'saramin', configured: false },
+      { provider: 'wanted', configured: true },
+    ] }));
+    vi.stubGlobal('fetch', mock);
+    const status = await fetchCredentialStatus();
+    expect(status).toEqual({ available: true, providers: { work24: true, saramin: false } });
+    expect(JSON.stringify(status)).not.toMatch(/key/i);
+  });
+
+  it('treats a missing credential endpoint (static/desktop server) as unavailable', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify({ error: { code: 'NOT_FOUND' } }), { status: 404, headers: { 'Content-Type': 'application/json' } })));
+    expect(await fetchCredentialStatus()).toEqual({ available: false, providers: { work24: false, saramin: false } });
+  });
+
+  it('sends the key only in a bounded JSON PUT body and returns booleans', async () => {
+    const mock = vi.fn(async () => Response.json({ providers: [
+      { provider: 'work24', configured: true },
+      { provider: 'saramin', configured: false },
+    ] }));
+    vi.stubGlobal('fetch', mock);
+    const result = await saveCredential('work24', 'test-only-key');
+    expect(result).toEqual({ work24: true, saramin: false });
+    const [url, init] = mock.mock.calls[0] as unknown as [string, RequestInit];
+    expect(url).toContain('/api/credentials/work24');
+    expect(init.method).toBe('PUT');
+    expect((init.headers as Record<string, string>)['Content-Type']).toBe('application/json');
+    expect(init.body).toBe(JSON.stringify({ key: 'test-only-key' }));
+  });
+
+  it('surfaces a server error message without leaking anything else', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify({ error: { code: 'BAD_KEY', message: 'API 키를 입력해주세요.' } }), { status: 400, headers: { 'Content-Type': 'application/json' } })));
+    await expect(saveCredential('saramin', 'x')).rejects.toThrow('API 키를 입력해주세요.');
+  });
+
+  it('clears a provider with DELETE and rejects a non-JSON reply', async () => {
+    const deletes: Array<{ url: string; method?: string }> = [];
+    vi.stubGlobal('fetch', vi.fn(async (url: string, init?: RequestInit) => {
+      deletes.push({ url, method: init?.method });
+      return new Response('<html>static</html>', { status: 200, headers: { 'Content-Type': 'text/html' } });
+    }));
+    await expect(clearCredential('work24')).rejects.toThrow('화면에서 저장할 수 없어요');
+    expect(deletes[0].method).toBe('DELETE');
+    expect(deletes[0].url).toContain('/api/credentials/work24');
   });
 });

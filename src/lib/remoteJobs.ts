@@ -69,6 +69,88 @@ export async function searchRemoteJobs(source: SearchSource, query: string, loca
     warnings: Array.isArray(data.warnings) ? data.warnings.filter((v): v is string => typeof v === 'string') : [], cached: data.cached === true,
     total: Number.isSafeInteger(data.total) && Number(data.total) >= 0 ? Number(data.total) : undefined, sourceResults, nextCursor: data.nextCursor as string | null | undefined };
 }
+// --- Browser-mode credential management -----------------------------------
+// Only the server persists keys (into `.env.local`). These helpers never read a
+// secret back: they accept a key, return booleans, and are only used when the
+// desktop bridge is absent.
+
+export type CredentialProvider = 'work24' | 'saramin';
+
+export interface CredentialStatus {
+  available: boolean;
+  providers: Record<CredentialProvider, boolean>;
+}
+
+const CREDENTIAL_PROVIDERS: CredentialProvider[] = ['work24', 'saramin'];
+
+function parseCredentialProviders(value: unknown): Record<CredentialProvider, boolean> | null {
+  if (!Array.isArray(value)) return null;
+  const status = { work24: false, saramin: false };
+  let known = false;
+  for (const entry of value) {
+    if (!entry || typeof entry !== 'object') continue;
+    const item = entry as { provider?: unknown; configured?: unknown };
+    if (CREDENTIAL_PROVIDERS.includes(item.provider as CredentialProvider) && typeof item.configured === 'boolean') {
+      status[item.provider as CredentialProvider] = item.configured;
+      known = true;
+    }
+  }
+  return known ? status : null;
+}
+
+function credentialError(error: unknown): never {
+  const message = (error as { error?: { message?: unknown } } | null)?.error?.message;
+  throw new Error(typeof message === 'string' ? message : 'API 키 설정을 처리하지 못했어요.');
+}
+
+async function credentialRequest(method: 'GET' | 'PUT' | 'DELETE', provider: CredentialProvider | null, key: string | null): Promise<Record<CredentialProvider, boolean>> {
+  const path = provider ? `/credentials/${provider}` : '/credentials';
+  let response: Response;
+  try {
+    response = await fetch(`${api}${path}`, {
+      method,
+      signal: AbortSignal.timeout(15000),
+      headers: { Accept: 'application/json', ...(method === 'PUT' ? { 'Content-Type': 'application/json' } : {}) },
+      ...(method === 'PUT' ? { body: JSON.stringify({ key }) } : {}),
+    });
+  } catch {
+    throw new Error('API 키 설정 서버에 연결하지 못했어요. 서버 실행 상태를 확인해주세요.');
+  }
+  if (!response.headers.get('content-type')?.includes('application/json')) throw new Error('이 실행 모드에서는 API 키를 화면에서 저장할 수 없어요.');
+  const body: unknown = await response.json();
+  if (!response.ok) credentialError(body);
+  const providers = parseCredentialProviders((body as { providers?: unknown } | null)?.providers);
+  if (!providers) throw new Error('API 키 상태를 읽을 수 없어요.');
+  return providers;
+}
+
+/** GET status booleans. `available: false` when this server has no credential store. */
+export async function fetchCredentialStatus(signal?: AbortSignal): Promise<CredentialStatus> {
+  const unavailable: CredentialStatus = { available: false, providers: { work24: false, saramin: false } };
+  let response: Response;
+  try {
+    response = await fetch(`${api}/credentials`, { signal: AbortSignal.any([AbortSignal.timeout(15000), ...(signal ? [signal] : [])]), headers: { Accept: 'application/json' } });
+  } catch (error) {
+    if (signal?.aborted) throw error;
+    throw new Error('API 키 설정 서버에 연결하지 못했어요.');
+  }
+  if (!response.headers.get('content-type')?.includes('application/json')) return unavailable;
+  const body: unknown = await response.json();
+  const providers = parseCredentialProviders((body as { providers?: unknown } | null)?.providers);
+  if (!response.ok || !providers) return unavailable;
+  return { available: true, providers };
+}
+
+/** PUT one provider key. Resolves to the fresh status booleans. */
+export async function saveCredential(provider: CredentialProvider, key: string): Promise<Record<CredentialProvider, boolean>> {
+  return credentialRequest('PUT', provider, key);
+}
+
+/** DELETE one provider key. Resolves to the fresh status booleans. */
+export async function clearCredential(provider: CredentialProvider): Promise<Record<CredentialProvider, boolean>> {
+  return credentialRequest('DELETE', provider, null);
+}
+
 /** A live source check is only possible for officially approved sources. Pure check first. */
 export function canProbeSource(source: JobSource): boolean { return isApprovedSource(source); }
 export async function probeSource(source: JobSource, signal?: AbortSignal): Promise<SearchResult> {

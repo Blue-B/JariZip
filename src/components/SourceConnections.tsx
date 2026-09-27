@@ -1,21 +1,26 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowUpRight, RefreshCw } from 'lucide-react';
-import { canProbeSource, fetchSources, probeSource, SOURCE_SITES, type JobSource, type SourceOption } from '../lib/remoteJobs';
+import { canProbeSource, fetchCredentialStatus, fetchSources, probeSource, SOURCE_SITES, type CredentialStatus, type JobSource, type SourceOption } from '../lib/remoteJobs';
 import { useApiSetup } from './ApiSetupWizard';
+import BrowserApiKeys from './BrowserApiKeys';
 import '../styles/connections.css';
 
 type Probe = { state: 'loading' | 'ready' | 'error'; message: string };
 
 /** Configuration and a real upstream request are deliberately separate checks.
  *  A live check is offered only for officially approved, key-configured sources, and the
- *  last result is cleared when the source list changes so it never mislabels a new check. */
+ *  last result is cleared when the source list changes so it never mislabels a new check.
+ *  In browser mode the server also exposes the key management panel; typing a key is
+ *  held in that panel's own state and never returned by the server. */
 export default function SourceConnections() {
   const apiSetup = useApiSetup();
+  const desktop = apiSetup.available;
   const [sources, setSources] = useState<SourceOption[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [attempt, setAttempt] = useState(0);
+  const [credentialStatus, setCredentialStatus] = useState<CredentialStatus | null>(null);
   const [probes, setProbes] = useState<Partial<Record<JobSource, Probe>>>({});
   const controllers = useRef(new Map<JobSource, AbortController>());
 
@@ -32,6 +37,14 @@ export default function SourceConnections() {
     }).finally(() => { if (!controller.signal.aborted) setLoading(false); });
     return () => controller.abort();
   }, [attempt, apiSetup.revision, apiSetup.available]);
+
+  // Browser mode reads whether the server has a credential store once, then on change.
+  useEffect(() => {
+    if (desktop) return;
+    let cancelled = false;
+    fetchCredentialStatus().then(value => { if (!cancelled) setCredentialStatus(value); }).catch(() => { if (!cancelled) setCredentialStatus(null); });
+    return () => { cancelled = true; };
+  }, [desktop, attempt]);
 
   useEffect(() => () => {
     for (const controller of controllers.current.values()) controller.abort();
@@ -55,14 +68,24 @@ export default function SourceConnections() {
 
   const statusMeta = (source: SourceOption) => {
     if (source.enabled) return '공식 API 설정됨 · 아래에서 실제 응답을 확인할 수 있어요';
-    const desktopHint = apiSetup.available ? ' 위의 연결 설정에서 키를 등록해주세요.' : '';
-    if (source.id === 'saramin') return `API 키 미설정 · 현재 자동 조회할 수 없음.${desktopHint}`;
-    if (source.id === 'work24') return `인증키 미설정 · 현재 자동 조회할 수 없음.${desktopHint}`;
+    const hint = desktop
+      ? ' 위의 연결 설정에서 키를 등록해주세요.'
+      : credentialStatus?.available ? ' 위에서 발급받은 키를 저장해주세요.' : ' 서버의 .env.local에 키를 설정해주세요.';
+    if (source.id === 'saramin') return `API 키 미설정 · 현재 자동 조회할 수 없음.${hint}`;
+    if (source.id === 'work24') return `인증키 미설정 · 현재 자동 조회할 수 없음.${hint}`;
     return '자동 조회 미사용 · 원문 사이트에서 직접 확인하고 보관';
+  };
+
+  const refreshAfterKeyChange = (providers: Record<'work24' | 'saramin', boolean>) => {
+    // The save/clear response already returned fresh booleans; just refetch the
+    // source list so each row's enabled state and labels update immediately.
+    setCredentialStatus({ available: true, providers });
+    setAttempt(value => value + 1);
   };
 
   return <div className="source-connections">
     <p className="connection-intro">서버 설정과 실제 공고 조회 결과를 나누어 보여드려요. 확인할 때 서류나 개인정보는 전송하지 않습니다. 공식 API 승인이 확인된 출처만 자동으로 조회하며, 화면 조작이나 설정이 제공사 허가를 대신하지는 않아요.</p>
+    {!desktop && credentialStatus?.available && <BrowserApiKeys status={credentialStatus} onChanged={refreshAfterKeyChange}/>}
     {loading && <p role="status">조회 서버 설정을 확인하고 있어요.</p>}
     {error && <div className="connection-error" role="alert"><p>{error}</p><button type="button" className="button secondary" onClick={() => setAttempt(value => value + 1)}>서버 다시 확인</button></div>}
     {!loading && !error && <ul className="connection-list">{sources.map(source => {
@@ -80,9 +103,11 @@ export default function SourceConnections() {
         </div>
       </li>;
     })}</ul>}
-    <p className="connection-footnote">{apiSetup.available
+    <p className="connection-footnote">{desktop
       ? '데스크톱 앱에서는 위의 연결 설정에서 발급받은 키를 이 기기에만 저장해요. 사람인·고용24 공식 API는 승인된 앱·사용 범위와 제공사가 정한 호출 한도를 따릅니다. 고용24 결과는 원문 링크와 출처 표시를 함께 제공해야 하며, 키만으로 재배포·자동 수집 허가가 되지는 않습니다. 다른 출처의 자동 수집 코드는 실행되지 않습니다.'
-      : '사람인·고용24 공식 API는 서버에 각각 개인 발급 키(SARAMIN_ACCESS_KEY·WORK24_AUTH_KEY)를 설정한 경우에만 사용하며, 승인된 앱·사용 범위와 제공사가 정한 호출 한도를 따릅니다. 고용24 결과는 원문 링크와 출처 표시를 함께 제공해야 합니다. 키만으로 재배포·자동 수집 허가가 되지는 않습니다. 다른 출처의 자동 수집 코드는 실행되지 않습니다.'}</p>
+      : credentialStatus?.available
+        ? '사람인·고용24 공식 API는 서버가 위에서 저장한 개인 발급 키(SARAMIN_ACCESS_KEY·WORK24_AUTH_KEY)를 .env.local에 보관한 경우에만 사용하며, 승인된 앱·사용 범위와 제공사가 정한 호출 한도를 따릅니다. 고용24 결과는 원문 링크와 출처 표시를 함께 제공해야 하며, 키만으로 재배포·자동 수집 허가가 되지는 않습니다. 다른 출처의 자동 수집 코드는 실행되지 않습니다.'
+        : '사람인·고용24 공식 API는 서버에 각각 개인 발급 키(SARAMIN_ACCESS_KEY·WORK24_AUTH_KEY)를 설정한 경우에만 사용하며, 승인된 앱·사용 범위와 제공사가 정한 호출 한도를 따릅니다. 고용24 결과는 원문 링크와 출처 표시를 함께 제공해야 합니다. 키만으로 재배포·자동 수집 허가가 되지는 않습니다. 다른 출처의 자동 수집 코드는 실행되지 않습니다.'}</p>
     <Link to="/app/discover" className="connection-link">채용 탐색으로 이동<ArrowUpRight size={15} aria-hidden/></Link>
   </div>;
 }

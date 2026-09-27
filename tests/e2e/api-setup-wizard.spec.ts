@@ -82,13 +82,29 @@ test('first run with no configured source auto-opens the Korean wizard and expla
   await expect(panel.getByRole('button', { name: '공고 직접 추가하기', exact: true })).toBeVisible();
 });
 
-test('no wizard without the desktop bridge, and SourceConnections keeps .env.local guidance', async ({ page }) => {
+test('no desktop wizard without the bridge, and a static preview keeps .env.local guidance', async ({ page }) => {
   await mockJobApi(page);
+  // A static preview / server without a credential store answers 404 here,
+  // so the browser-mode key panel stays hidden and the env-file guidance remains.
+  await page.route('**/api/credentials**', route => route.fulfill({ status: 404, json: { error: { code: 'NOT_FOUND' } } }));
   await page.goto('/#/app/settings', { waitUntil: 'networkidle' });
   await expect(page.getByRole('dialog')).toHaveCount(0);
   await expect(page.getByRole('button', { name: '연결 설정', exact: true })).toHaveCount(0);
+  await expect(page.getByTestId('browser-api-keys')).toHaveCount(0);
   await expect(page.locator('.connection-intro').first()).toContainText('.env.local');
   await expect(page.locator('.connection-footnote')).toContainText('SARAMIN_ACCESS_KEY');
+});
+
+test('browser mode shows the key panel instead of the desktop wizard', async ({ page }) => {
+  await mockJobApi(page);
+  await page.route('**/api/credentials**', route => route.fulfill({ json: { providers: [
+    { provider: 'work24', configured: false },
+    { provider: 'saramin', configured: false },
+  ] } }));
+  await page.goto('/#/app/settings', { waitUntil: 'networkidle' });
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+  await expect(page.getByTestId('browser-api-keys')).toBeVisible();
+  await expect(page.locator('.connection-desktop-entry')).toHaveCount(0);
 });
 
 test('wizard stays closed when an approved source is already configured', async ({ page }) => {

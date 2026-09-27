@@ -75,7 +75,7 @@ export default function Settings() {
                 <div><strong>처음 설정 마법사로 다시 열기</strong><p>고용24·사람인 공식 키를 발급 안내와 함께 다시 연결하거나 해제할 수 있어요. 키는 이 기기의 JariZip 앱에만 저장돼요.</p></div>
                 <Button variant="primary" onClick={apiSetup.openWizard}><Plug size={16}/>연결 설정</Button>
               </div>
-            : <p className="connection-intro">이 브라우저 모드에서는 프로젝트의 <code>.env.local</code> 파일에 서버용 키를 직접 설정해요. 아래 출처별 안내를 확인하세요.</p>}
+            : <p className="connection-intro">이 브라우저/로컬 서버 모드에서는 아래에서 발급받은 키를 저장하면 서버가 <code>.env.local</code>에 보관하고 재시작 없이 바로 반영해요. 정적 미리보기처럼 서버가 없을 때는 프로젝트의 <code>.env.local</code>을 직접 설정해요.</p>}
           <SourceConnections/>
         </section>
 
