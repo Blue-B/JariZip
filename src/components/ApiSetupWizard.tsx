@@ -357,7 +357,7 @@ function ApiSetupWizard({ bridge, status, onRefreshStatus, onClose, onAddManual,
               {keySaved ? '연결 다시 확인' : '저장하고 연결 확인'}<ShieldCheck size={16} aria-hidden/>
             </Button>
           </div>
-          <p className="api-setup-privacy">키 저장은 이 기기의 JariZip 앱에만 적용돼요. 실제 공고 조회가 되는지 아래에서 바로 확인해요.</p>
+          <p className="api-setup-privacy">설정한 키는 이 기기의 JariZip 앱에만 저장돼요. 실제 공고 조회가 되는지 아래에서 바로 확인해요.</p>
         </>}
 
         {stage === 'verifying' && <div className="api-setup-verifying" role="status" aria-live="polite">

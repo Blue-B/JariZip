@@ -2,7 +2,10 @@
 .connection-intro, .connection-copy p { color: #536176; font-size: 14px; line-height: 1.75; }
 .connection-intro { margin: 0 0 20px; }
 .connection-list { list-style: none; padding: 0; margin: 0; border-top: 1px solid #e1e6ed; }
-.connection-row { display: flex; align-items: center; justify-content: space-between; gap: 20px; padding: 20px 0; border-bottom: 1px solid #e1e6ed; }
+.connection-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 20px; padding: 20px 0; border-bottom: 1px solid #e1e6ed; }
+.connection-main { flex: 1; min-width: 0; }
+.connection-head { display: flex; align-items: center; gap: 9px; flex-wrap: wrap; }
+.connection-head h3 { margin: 0; color: #17253a; font-size: 16px; }
 .connection-copy { min-width: 0; }
 .connection-copy h3 { margin: 0 0 5px; color: #17253a; font-size: 16px; }
 .connection-copy p { margin: 3px 0; overflow-wrap: anywhere; }
@@ -13,7 +16,9 @@
 .connection-actions { display: flex; flex: 0 0 auto; flex-wrap: wrap; gap: 8px; justify-content: flex-end; }
 .connection-actions > a { display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; }
 .connection-copy .connection-manual { font-size: 13px; color: #66758a; line-height: 1.7; }
+.connection-main .connection-manual { font-size: 13px; color: #66758a; line-height: 1.75; margin-top: 7px; }
 .connection-footnote { margin-top: 18px; font-size: 12px; line-height: 1.8; color: #66758a; }
+.connection-footnote-storage code { padding: 1px 5px; border-radius: 5px; background: #e3eaf3; font-size: 11.5px; color: #2b4a63; overflow-wrap: anywhere; }
 .connection-link { display: inline-flex; align-items: center; gap: 6px; margin-top: 18px; min-height: 40px; color: #2348e8; font-size: 14px; font-weight: 650; text-decoration: none; }
 .connection-link:hover { text-decoration: underline; text-underline-offset: 4px; }
 .connection-error p { overflow-wrap: anywhere; }
@@ -27,5 +32,7 @@
 }
 @media (max-width: 760px) {
   .connection-row { align-items: flex-start; flex-direction: column; gap: 12px; }
-  .connection-actions { align-self: flex-start; justify-content: flex-start; }
+  .connection-main { width: 100%; }
+  .connection-actions { align-self: flex-start; justify-content: flex-start; width: 100%; }
+  .connection-actions .button { flex: 1 1 auto; }
 }

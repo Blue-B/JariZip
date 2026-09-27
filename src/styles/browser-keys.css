@@ -1,42 +1,15 @@
-/* Browser / local-server API key management.
-   Lives inside the existing `.source-connections` panel on Settings. Uses the
-   same calm blue-gray surfaces, charcoal text and single restrained blue accent
-   as the rest of the app. No gradients or decorative motion. */
-.browser-keys {
-  margin: 0 0 22px;
-  padding: 18px 20px;
-  border: 1px solid #cfd8e3;
-  border-radius: 12px;
-  background: #f1f5fa;
-}
-.browser-keys-lead {
-  margin: 0 0 16px;
-  font-size: 13px;
-  line-height: 1.8;
-  color: #3d4a5a;
-}
-.browser-keys-lead code,
-.browser-keys-foot code {
-  padding: 1px 5px;
-  border-radius: 5px;
-  background: #e3eaf3;
-  font-size: 11.5px;
-  color: #2b4a63;
-  overflow-wrap: anywhere;
-}
-.browser-keys-list { list-style: none; display: flex; flex-direction: column; gap: 12px; margin: 0; padding: 0; }
-.browser-key-row {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  padding: 16px 17px;
+/* Inline browser / local-server API key management for one source row.
+   Rendered inside the existing `.connection-row` on Settings. Uses the same calm
+   blue-gray surfaces, charcoal text and single restrained blue accent as the rest
+   of the app. No gradients or decorative motion. There is no separate key panel:
+   each provider's controls live in that provider's only source row. */
+.browser-key-controls {
+  margin-top: 12px;
+  padding: 14px 15px;
   border: 1px solid #dbe2ec;
   border-radius: 10px;
-  background: #fff;
+  background: #f7fafd;
 }
-.browser-key-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
-.browser-key-head h3 { margin: 0; font-size: 15px; font-weight: 650; color: #17253a; }
-.browser-key-head span { display: block; margin-top: 3px; font-size: 11px; color: #66758a; overflow-wrap: anywhere; }
 .browser-key-form { display: flex; flex-direction: column; gap: 12px; }
 .browser-key-steps { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 5px; font-size: 12.5px; line-height: 1.7; color: #3d4a5a; }
 .browser-key-steps li::marker { color: #2b5f8c; font-weight: 700; }
@@ -71,22 +44,10 @@
 }
 .browser-key-reveal:hover { background: #e9eff6; color: #2b5f8c; }
 .browser-key-actions { display: flex; gap: 9px; flex-wrap: wrap; }
-.browser-key-row .connection-result { margin: 0; font-size: 12.5px; }
-.browser-key-row .result-ready { color: #216446; }
-.browser-key-row .result-error { color: #9c382d; }
-.browser-keys-foot {
-  display: flex;
-  align-items: flex-start;
-  gap: 7px;
-  margin: 16px 0 0;
-  font-size: 11.5px;
-  line-height: 1.8;
-  color: #5c6b7e;
-}
-.browser-keys-foot > svg { flex-shrink: 0; margin-top: 3px; color: #2f6b4f; }
+.browser-key-controls .api-setup-error { margin-top: 0; }
 
 @media (max-width: 640px) {
-  .browser-keys { padding: 16px 14px; }
+  .browser-key-controls { padding: 13px 12px; }
   .browser-key-actions { flex-direction: column; }
   .browser-key-actions .button { width: 100%; }
 }

@@ -5,6 +5,10 @@ import { test, expect, type Page } from '@playwright/test';
  * Every credential endpoint is mocked at the network layer and every key is
  * synthetic. No real key is typed, no `.env.local` is touched and no external
  * site is contacted. The desktop-bridge spec keeps its own coverage.
+ *
+ * In browser mode there is exactly one row per source. The work24/saramin row
+ * carries its own inline key controls, so there is no separate key panel that
+ * would duplicate the source list.
  */
 
 const WORK24_KEY = 'test-only-work24-key-0001';
@@ -51,29 +55,40 @@ async function mockCredentials(page: Page, initial: { work24?: boolean; saramin?
   ] } }));
   await page.route('**/api/jobs?**', route => {
     const url = new URL(route.request().url());
+    const source = url.searchParams.get('source') ?? 'work24';
     if (options.failProbe && url.searchParams.get('refresh') === '1') {
-      return route.fulfill({ json: { jobs: [], nextPage: null, checkedAt: new Date().toISOString(), warnings: [], cached: false, sourceResults: [{ id: 'work24', name: '고용24', count: 0, status: 'error', message: options.failProbe }] } });
+      return route.fulfill({ json: { jobs: [], nextPage: null, checkedAt: new Date().toISOString(), warnings: [], cached: false, sourceResults: [{ id: source, name: source, count: 0, status: 'error', message: options.failProbe }] } });
     }
-    return route.fulfill({ json: { jobs: [], nextPage: null, checkedAt: new Date().toISOString(), warnings: [], cached: false, sourceResults: [{ id: 'work24', name: '고용24', count: 0, status: 'ok', exhausted: true }] } });
+    return route.fulfill({ json: { jobs: [], nextPage: null, checkedAt: new Date().toISOString(), warnings: [], cached: false, sourceResults: [{ id: source, name: source, count: 0, status: 'ok', exhausted: true }] } });
   });
   return mock;
 }
 
-const panel = (page: Page) => page.getByTestId('browser-api-keys');
-const work24Row = (page: Page) => page.locator('.browser-key-row').filter({ hasText: '고용24' });
-const clearDialog = (page: Page) => page.getByRole('dialog', { name: /키를 지울까요/ });
+const sourceRow = (page: Page, name: string) => page.locator('.connection-row').filter({ hasText: name });
+const controls = (page: Page, name: string) => sourceRow(page, name).getByTestId('browser-key-controls');
+const clearDialog = (page: Page) => page.getByRole('dialog', { name: /키를 삭제할까요/ });
 
-test('browser mode lets a user save a key from Settings without editing .env.local', async ({ page }) => {
+test('browser mode renders exactly one row per source with no duplicate key panel', async ({ page }) => {
+  await mockCredentials(page);
+  await page.goto('/#/app/settings', { waitUntil: 'networkidle' });
+  await expect(page.locator('.connection-row')).toHaveCount(3);
+  await expect(page.getByTestId('browser-key-controls')).toHaveCount(2);
+  // The old standalone key panel must be gone.
+  await expect(page.getByTestId('browser-api-keys')).toHaveCount(0);
+  await expect(page.locator('.browser-key-row')).toHaveCount(0);
+  // Only one element per provider name in the connection list.
+  await expect(sourceRow(page, '고용24')).toHaveCount(1);
+  await expect(sourceRow(page, '사람인')).toHaveCount(1);
+});
+
+test('browser mode lets a user set a key inline without editing .env.local', async ({ page }) => {
   const mock = await mockCredentials(page);
   await page.goto('/#/app/settings', { waitUntil: 'networkidle' });
-  const keys = panel(page);
-  await expect(keys).toBeVisible();
-  await expect(keys).toContainText('이 브라우저 모드에서는 서버가 발급받은 키를');
-  await expect(keys).toContainText('.env.local');
 
-  const row = work24Row(page);
+  const row = sourceRow(page, '고용24');
   await expect(row).toContainText('미설정');
-  await row.getByRole('button', { name: '키 저장', exact: true }).click();
+  await expect(page.locator('.connection-footnote-storage')).toContainText('.env.local');
+  await row.getByRole('button', { name: '키 설정', exact: true }).click();
 
   const input = row.getByLabel('고용24 API 키', { exact: true });
   await expect(input).toHaveAttribute('type', 'password');
@@ -85,7 +100,7 @@ test('browser mode lets a user save a key from Settings without editing .env.loc
   // Official guide link is a normal same-page https link, never an automated call.
   await expect(row.getByRole('link', { name: '고용24 API 안내 열기' })).toHaveAttribute('href', 'https://www.work24.go.kr/cm/e/a/0110/selectOpenApiIntro.do');
 
-  await row.getByRole('button', { name: '저장하고 조회 확인', exact: true }).click();
+  await row.getByRole('button', { name: '설정하고 조회 확인', exact: true }).click();
   await expect(row).toContainText('설정됨');
   await expect(row.locator('.connection-result')).toContainText('조회 응답 확인');
   expect(mock.puts).toEqual([{ provider: 'work24', key: WORK24_KEY }]);
@@ -95,39 +110,51 @@ test('browser mode lets a user save a key from Settings without editing .env.loc
   expect(JSON.stringify(stored)).not.toContain(WORK24_KEY);
 });
 
-test('a saved key immediately enables the source and performs a real probe, without a restart', async ({ page }) => {
+test('a saved key immediately enables the same source row and performs a real probe, without a restart', async ({ page }) => {
   const mock = await mockCredentials(page);
   let probeSource: string | null = null;
   await page.route('**/api/jobs?**', route => {
     const url = new URL(route.request().url());
     if (url.searchParams.get('refresh') === '1') probeSource = url.searchParams.get('source');
-    return route.fulfill({ json: { jobs: [], nextPage: null, checkedAt: new Date().toISOString(), warnings: [], cached: false, sourceResults: [{ id: 'work24', name: '고용24', count: 0, status: 'ok', exhausted: true }] } });
+    const source = url.searchParams.get('source') ?? 'work24';
+    return route.fulfill({ json: { jobs: [], nextPage: null, checkedAt: new Date().toISOString(), warnings: [], cached: false, sourceResults: [{ id: source, name: source, count: 0, status: 'ok', exhausted: true }] } });
   });
   await page.goto('/#/app/settings', { waitUntil: 'networkidle' });
-  const sourceRow = page.locator('.connection-row').filter({ hasText: '고용24' });
-  await expect(sourceRow.getByRole('button', { name: '고용24 공고 조회 확인', exact: true })).toBeDisabled();
+  const row = sourceRow(page, '고용24');
+  await expect(row.getByRole('button', { name: '고용24 공고 조회 확인', exact: true })).toBeDisabled();
 
-  await work24Row(page).getByRole('button', { name: '키 저장', exact: true }).click();
-  await work24Row(page).getByLabel('고용24 API 키', { exact: true }).fill(WORK24_KEY);
-  await work24Row(page).getByRole('button', { name: '저장하고 조회 확인', exact: true }).click();
-  await expect(work24Row(page).locator('.connection-result')).toContainText('접수 중 공고 0건');
+  await row.getByRole('button', { name: '키 설정', exact: true }).click();
+  await row.getByLabel('고용24 API 키', { exact: true }).fill(WORK24_KEY);
+  await row.getByRole('button', { name: '설정하고 조회 확인', exact: true }).click();
+  await expect(row.locator('.connection-result')).toContainText('접수 중 공고 0건');
   expect(probeSource).toBe('work24');
-  // The source row itself is now enabled and probeable.
-  await expect(sourceRow.getByRole('button', { name: '고용24 공고 조회 확인', exact: true })).toBeEnabled();
+  // The very same source row is now enabled and probeable.
+  await expect(row.getByRole('button', { name: '고용24 공고 조회 확인', exact: true })).toBeEnabled();
   expect(mock.status.work24).toBe(true);
+});
+
+test('a configured key offers change and delete instead of set', async ({ page }) => {
+  await mockCredentials(page, { work24: true });
+  await page.goto('/#/app/settings', { waitUntil: 'networkidle' });
+  const row = sourceRow(page, '고용24');
+  await expect(row).toContainText('설정됨');
+  await expect(row.getByRole('button', { name: '키 설정', exact: true })).toHaveCount(0);
+  await expect(row.getByRole('button', { name: '키 변경', exact: true })).toBeVisible();
+  await expect(row.getByRole('button', { name: '키 삭제', exact: true })).toBeVisible();
 });
 
 test('clearing a key asks for confirmation and removes it', async ({ page }) => {
   const mock = await mockCredentials(page, { work24: true });
   await page.goto('/#/app/settings', { waitUntil: 'networkidle' });
-  const row = work24Row(page);
+  const row = sourceRow(page, '고용24');
   await expect(row).toContainText('설정됨');
-  await row.getByRole('button', { name: '키 지우기', exact: true }).click();
+  await row.getByRole('button', { name: '키 삭제', exact: true }).click();
   const dialog = clearDialog(page);
   await expect(dialog).toContainText('.env.local');
-  await dialog.getByRole('button', { name: '키 지우기', exact: true }).click();
+  await dialog.getByRole('button', { name: '키 삭제', exact: true }).click();
   await expect(row).toContainText('미설정');
-  await expect(row.getByRole('button', { name: '키 지우기', exact: true })).toHaveCount(0);
+  await expect(row.getByRole('button', { name: '키 삭제', exact: true })).toHaveCount(0);
+  await expect(row.getByRole('button', { name: '키 설정', exact: true })).toBeVisible();
   expect(mock.deletes).toContain('work24');
   expect(mock.status.work24).toBe(false);
 });
@@ -135,10 +162,10 @@ test('clearing a key asks for confirmation and removes it', async ({ page }) => 
 test('a failed server save is disclosed instead of claiming the key was stored', async ({ page }) => {
   await mockCredentials(page, {}, { failPut: 'API 키에 사용할 수 없는 문자가 있어요.' });
   await page.goto('/#/app/settings', { waitUntil: 'networkidle' });
-  const row = work24Row(page);
-  await row.getByRole('button', { name: '키 저장', exact: true }).click();
+  const row = sourceRow(page, '고용24');
+  await row.getByRole('button', { name: '키 설정', exact: true }).click();
   await row.getByLabel('고용24 API 키', { exact: true }).fill(WORK24_KEY);
-  await row.getByRole('button', { name: '저장하고 조회 확인', exact: true }).click();
+  await row.getByRole('button', { name: '설정하고 조회 확인', exact: true }).click();
   await expect(row.locator('.api-setup-error')).toContainText('사용할 수 없는 문자');
   await expect(row).toContainText('미설정');
 });
@@ -146,15 +173,25 @@ test('a failed server save is disclosed instead of claiming the key was stored',
 test('a failed live probe after a successful save is reported honestly', async ({ page }) => {
   await mockCredentials(page, {}, { failProbe: '시험용 고용24 조회 제한' });
   await page.goto('/#/app/settings', { waitUntil: 'networkidle' });
-  const row = work24Row(page);
-  await row.getByRole('button', { name: '키 저장', exact: true }).click();
+  const row = sourceRow(page, '고용24');
+  await row.getByRole('button', { name: '키 설정', exact: true }).click();
   await row.getByLabel('고용24 API 키', { exact: true }).fill(WORK24_KEY);
-  await row.getByRole('button', { name: '저장하고 조회 확인', exact: true }).click();
+  await row.getByRole('button', { name: '설정하고 조회 확인', exact: true }).click();
   await expect(row).toContainText('설정됨');
   await expect(row.locator('.connection-result[role="alert"]')).toContainText('시험용 고용24 조회 제한');
 });
 
-test('the browser key panel never appears when the desktop bridge is present', async ({ page }) => {
+test('unapproved sources are clearly badged and never offer a key input', async ({ page }) => {
+  await mockCredentials(page);
+  await page.goto('/#/app/settings', { waitUntil: 'networkidle' });
+  const wanted = sourceRow(page, '원티드');
+  await expect(wanted.locator('.tag')).toContainText('자동조회 미지원');
+  await expect(wanted).toContainText('API 키가 필요 없는 출처라는 뜻이 아니에요');
+  await expect(wanted.getByTestId('browser-key-controls')).toHaveCount(0);
+  await expect(wanted.getByRole('button', { name: /키 설정|키 변경|키 삭제/ })).toHaveCount(0);
+});
+
+test('the browser key controls never appear when the desktop bridge is present', async ({ page }) => {
   await page.addInitScript(() => {
     (window as unknown as { jarizipDesktop: unknown }).jarizipDesktop = {
       getInfo: async () => ({ platform: 'win32', version: '0.1.0-test' }),
@@ -166,16 +203,16 @@ test('the browser key panel never appears when the desktop bridge is present', a
   });
   await page.route('**/api/sources', route => route.fulfill({ json: { sources: [{ id: 'work24', name: '고용24', enabled: true, note: '설정됨' }] } }));
   await page.goto('/#/app/settings', { waitUntil: 'networkidle' });
-  await expect(panel(page)).toHaveCount(0);
+  await expect(page.getByTestId('browser-key-controls')).toHaveCount(0);
   await expect(page.locator('.connection-desktop-entry')).toContainText('연결 설정');
 });
 
-test('the browser key panel fits a narrow screen without horizontal overflow', async ({ page }) => {
+test('the unified source list fits a narrow screen without horizontal overflow', async ({ page }) => {
   await page.setViewportSize({ width: 360, height: 800 });
   await mockCredentials(page);
   await page.goto('/#/app/settings', { waitUntil: 'networkidle' });
-  await expect(panel(page)).toBeVisible();
+  await expect(controls(page, '고용24')).toBeVisible();
   await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
-  await work24Row(page).getByRole('button', { name: '키 저장', exact: true }).click();
+  await sourceRow(page, '고용24').getByRole('button', { name: '키 설정', exact: true }).click();
   await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
 });

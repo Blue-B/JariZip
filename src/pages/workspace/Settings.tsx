@@ -75,7 +75,7 @@ export default function Settings() {
                 <div><strong>처음 설정 마법사로 다시 열기</strong><p>고용24·사람인 공식 키를 발급 안내와 함께 다시 연결하거나 해제할 수 있어요. 키는 이 기기의 JariZip 앱에만 저장돼요.</p></div>
                 <Button variant="primary" onClick={apiSetup.openWizard}><Plug size={16}/>연결 설정</Button>
               </div>
-            : <p className="connection-intro">이 브라우저/로컬 서버 모드에서는 아래에서 발급받은 키를 저장하면 서버가 <code>.env.local</code>에 보관하고 재시작 없이 바로 반영해요. 정적 미리보기처럼 서버가 없을 때는 프로젝트의 <code>.env.local</code>을 직접 설정해요.</p>}
+            : <p className="connection-intro">이 브라우저/로컬 서버 모드에서는 아래 출처 목록에서 고용24·사람인 키를 바로 설정할 수 있어요. 서버가 필요한 경우 키를 <code>.env.local</code>에 보관하고 재시작 없이 반영해요. 원티드·점핏·직행은 승인된 공식 자동 API가 없어 자동조회를 지원하지 않고, 원문 확인·직접 기록만 제공해요. 정적 미리보기처럼 서버가 없을 때는 프로젝트의 <code>.env.local</code>을 직접 설정해요.</p>}
           <SourceConnections/>
         </section>
 

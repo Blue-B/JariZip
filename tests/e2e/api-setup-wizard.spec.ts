@@ -90,12 +90,12 @@ test('no desktop wizard without the bridge, and a static preview keeps .env.loca
   await page.goto('/#/app/settings', { waitUntil: 'networkidle' });
   await expect(page.getByRole('dialog')).toHaveCount(0);
   await expect(page.getByRole('button', { name: '연결 설정', exact: true })).toHaveCount(0);
-  await expect(page.getByTestId('browser-api-keys')).toHaveCount(0);
+  await expect(page.getByTestId('browser-key-controls')).toHaveCount(0);
   await expect(page.locator('.connection-intro').first()).toContainText('.env.local');
   await expect(page.locator('.connection-footnote')).toContainText('SARAMIN_ACCESS_KEY');
 });
 
-test('browser mode shows the key panel instead of the desktop wizard', async ({ page }) => {
+test('browser mode shows inline key controls on the source rows instead of the desktop wizard', async ({ page }) => {
   await mockJobApi(page);
   await page.route('**/api/credentials**', route => route.fulfill({ json: { providers: [
     { provider: 'work24', configured: false },
@@ -103,7 +103,7 @@ test('browser mode shows the key panel instead of the desktop wizard', async ({ 
   ] } }));
   await page.goto('/#/app/settings', { waitUntil: 'networkidle' });
   await expect(page.getByRole('dialog')).toHaveCount(0);
-  await expect(page.getByTestId('browser-api-keys')).toBeVisible();
+  await expect(page.getByTestId('browser-key-controls')).toHaveCount(2);
   await expect(page.locator('.connection-desktop-entry')).toHaveCount(0);
 });
 
