@@ -75,8 +75,11 @@ export function createApiHandler({ env = process.env, service = createJobService
           const raw = await readBoundedBody(req);
           let body;
           try { body = JSON.parse(raw); } catch { throw new SourceError('요청 본문을 읽지 못했어요.', 400, 'BAD_BODY'); }
-          if (!body || typeof body !== 'object' || Array.isArray(body) || typeof body.key !== 'string') throw new SourceError('API 키를 확인해주세요.', 400, 'BAD_BODY');
-          const result = credentials.set(match[1], body.key);
+          if (!body || typeof body !== 'object' || Array.isArray(body)) throw new SourceError('API 설정값을 확인해주세요.', 400, 'BAD_BODY');
+          const hasKey = typeof body.key === 'string';
+          const hasFields = body.fields && typeof body.fields === 'object' && !Array.isArray(body.fields);
+          if (!hasKey && !hasFields) throw new SourceError('API 설정값을 확인해주세요.', 400, 'BAD_BODY');
+          const result = credentials.set(match[1], hasFields ? body.fields : body.key);
           json(res, 200, { providers: credentials.providers(), provider: result.provider, configured: result.configured }); return true;
         }
         if (req.method === 'DELETE') {
@@ -96,7 +99,7 @@ export function createApiHandler({ env = process.env, service = createJobService
         const result = await service.search({ provider: source, query: params.get('q') || '', page: Number(page), location: params.get('location') || 'all', category: params.get('category') || 'all', experience: params.get('experience') || 'all', refresh: params.get('refresh') === '1', cursor: params.has('cursor') ? params.get('cursor') : undefined });
         json(res, 200, result); return true;
       }
-      const match = /^\/api\/jobs\/(wanted|saramin|jumpit|zighang|work24|jooble)\/([0-9A-Za-z-]{1,40})$/i.exec(path);
+      const match = /^\/api\/jobs\/(wanted|saramin|jumpit|zighang|jobkorea|work24|jooble|jobalio)\/([0-9A-Za-z-]{1,40})$/i.exec(path);
       if (match) {
         if (!APPROVED_SOURCES.includes(match[1])) throw new SourceError('이 출처는 제공사의 사전 승인 없이 자동으로 조회하지 않아요. 원문 사이트에서 직접 확인해주세요.', 403, 'SOURCE_NOT_PERMITTED');
         json(res, 200, await service.detail(match[1], match[2], url.searchParams.get('refresh') === '1')); return true;

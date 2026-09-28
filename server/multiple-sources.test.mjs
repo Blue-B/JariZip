@@ -40,11 +40,13 @@ test('Zighang rich text is inert and dated listings preserve their actual dates'
 
 test('the shipped service exposes no unapproved source and refuses them before network', async () => {
   let calls = 0; const service = createJobService({ env: {}, fetcher: async () => { calls++; throw new Error('must not fetch'); } });
-  assert.deepEqual(service.sources().map(source => [source.id, source.enabled]), [['saramin', false], ['work24', false], ['jooble', false], ['wanted', false], ['jumpit', false], ['zighang', false]]);
+  assert.deepEqual(service.sources().map(source => [source.id, source.enabled]), [['saramin', false], ['work24', false], ['jooble', false], ['wanted', false], ['jobalio', false], ['jumpit', false], ['zighang', false], ['jobkorea', false]]);
   await assert.rejects(service.search({ provider: 'jumpit' }), error => error.code === 'SOURCE_NOT_PERMITTED');
   await assert.rejects(service.search({ provider: 'zighang' }), error => error.code === 'SOURCE_NOT_PERMITTED');
+  await assert.rejects(service.search({ provider: 'jobkorea' }), error => error.code === 'SOURCE_NOT_PERMITTED');
   await assert.rejects(service.detail('jumpit', '202'), error => error.code === 'SOURCE_NOT_PERMITTED');
   await assert.rejects(service.detail('zighang', uuid), error => error.code === 'SOURCE_NOT_PERMITTED');
+  await assert.rejects(service.detail('jobkorea', '101'), error => error.code === 'SOURCE_NOT_PERMITTED');
   assert.equal(calls, 0);
 });
 

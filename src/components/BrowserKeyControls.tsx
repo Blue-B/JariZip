@@ -8,7 +8,7 @@ import '../styles/browser-keys.css';
 
 interface BrowserKeyControlsProps {
   provider: CredentialProvider;
-  /** Whether the server currently holds a key for this provider. */
+  /** Whether the server currently holds every required field for this provider. */
   configured: boolean;
   /** Apply the fresh booleans returned by a save/clear and refetch the source list. */
   onChanged: (providers: Record<CredentialProvider, boolean>) => void;
@@ -20,51 +20,53 @@ interface BrowserKeyControlsProps {
  * Inline browser/local-server key management for one provider.
  *
  * The server owns persistence and never sends a secret back. This control only
- * receives a boolean, keeps the typed key in local state, drops it as soon as the
- * save resolves, and then asks its parent to run a real probe. Desktop keeps its
- * ApiSetupWizard; this is only rendered when the server exposes a credential store.
+ * receives a boolean, keeps the typed values in local state, drops them as soon
+ * as the save resolves, and then asks its parent to run a real probe. Providers
+ * that need several fields (Wanted OpenAPI) render one input per field.
  */
 export default function BrowserKeyControls({ provider, configured, onChanged, onProbe }: BrowserKeyControlsProps) {
   const { notify } = useWorkspace();
   const guide = PROVIDER_GUIDES[provider];
   const [editing, setEditing] = useState(false);
-  const [key, setKey] = useState('');
-  const [showKey, setShowKey] = useState(false);
+  const [values, setValues] = useState<Record<string, string>>({});
+  const [showValue, setShowValue] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [clearOpen, setClearOpen] = useState(false);
   const [clearing, setClearing] = useState(false);
+  const multiField = guide.fields.length > 1;
+  const ready = guide.fields.every(field => (values[field.name] ?? '').trim().length > 0);
 
   function begin() {
     setEditing(true);
-    setKey('');
-    setShowKey(false);
+    setValues({});
+    setShowValue(false);
     setError('');
   }
 
   function cancel() {
     setEditing(false);
-    setKey('');
+    setValues({});
     setError('');
   }
 
   async function save() {
-    const value = key.trim();
-    if (!value) { setError('발급받은 키를 입력해주세요.'); return; }
+    if (!ready) { setError('발급받은 설정값을 모두 입력해주세요.'); return; }
     setSaving(true);
     setError('');
     try {
-      const providers = await saveCredential(provider, value);
+      const trimmed = Object.fromEntries(guide.fields.map(field => [field.name, (values[field.name] ?? '').trim()]));
+      const providers = await saveCredential(provider, multiField ? trimmed : trimmed[guide.fields[0].name]);
       // The server owns the secret now; drop it from React state immediately.
-      setKey('');
+      setValues({});
       setEditing(false);
       onChanged(providers);
       notify(`${guide.name} 키를 설정했어요.`);
       onProbe(provider);
     } catch (problem) {
-      setError(problem instanceof Error ? problem.message : '키를 설정하지 못했어요. 다시 확인해주세요.');
+      setError(problem instanceof Error ? problem.message : '설정을 저장하지 못했어요. 다시 확인해주세요.');
     } finally {
-      setKey('');
+      setValues({});
       setSaving(false);
     }
   }
@@ -77,7 +79,7 @@ export default function BrowserKeyControls({ provider, configured, onChanged, on
       notify(`${guide.name} 키를 삭제했어요.`);
       setClearOpen(false);
     } catch (problem) {
-      setError(problem instanceof Error ? problem.message : '키를 삭제하지 못했어요.');
+      setError(problem instanceof Error ? problem.message : '설정을 삭제하지 못했어요.');
       setClearOpen(false);
     } finally {
       setClearing(false);
@@ -91,34 +93,34 @@ export default function BrowserKeyControls({ provider, configured, onChanged, on
           <a className="button secondary browser-key-guide" href={guide.page} target="_blank" rel="noopener noreferrer" aria-label={`${guide.name} API 안내 열기`}>
             {guide.pageLabel}<ArrowUpRight size={15} aria-hidden/>
           </a>
-          <label className="browser-key-field">
-            <span>{guide.name} {guide.keyLabel}</span>
-            <span className="field-hint">붙여넣은 키는 설정한 뒤 이 화면에서 바로 지워지고, 브라우저 저장소에는 남지 않아요.</span>
+          {guide.fields.map(field => <label className="browser-key-field" key={field.name}>
+            <span>{multiField ? `${guide.name} ${field.label}` : `${guide.name} ${guide.keyLabel}`}</span>
+            <span className="field-hint">{multiField ? `${field.env}에 저장할 값을 붙여넣어요.` : '붙여넣은 값은 설정한 뒤 이 화면에서 바로 지워지고, 브라우저 저장소에는 남지 않아요.'}</span>
             <span className="browser-key-input">
               <KeyRound size={17} aria-hidden/>
               <input
-                type={showKey ? 'text' : 'password'}
-                value={key}
-                onChange={event => setKey(event.target.value)}
+                type={showValue ? 'text' : 'password'}
+                value={values[field.name] ?? ''}
+                onChange={event => setValues(current => ({ ...current, [field.name]: event.target.value }))}
                 onKeyDown={event => { if (event.key === 'Enter') { event.preventDefault(); void save(); } }}
-                placeholder="발급받은 키를 붙여넣기"
-                aria-label={`${guide.name} API 키`}
+                placeholder={`${field.label} 붙여넣기`}
+                aria-label={multiField ? `${guide.name} ${field.label}` : `${guide.name} API 키`}
                 autoComplete="off"
                 autoCorrect="off"
                 autoCapitalize="off"
                 spellCheck={false}
                 maxLength={512}
-                name={`api-key-${provider}`}
+                name={`api-field-${provider}-${field.name}`}
               />
-              <button type="button" className="browser-key-reveal" aria-label={showKey ? '키 가리기' : '키 보기'} aria-pressed={showKey} onClick={() => setShowKey(value => !value)}>
-                {showKey ? <EyeOff size={17} aria-hidden/> : <Eye size={17} aria-hidden/>}
+              <button type="button" className="browser-key-reveal" aria-label={showValue ? '키 가리기' : '키 보기'} aria-pressed={showValue} onClick={() => setShowValue(value => !value)}>
+                {showValue ? <EyeOff size={17} aria-hidden/> : <Eye size={17} aria-hidden/>}
               </button>
             </span>
-          </label>
+          </label>)}
           {error && <p className="api-setup-error" role="alert"><CircleAlert size={16} aria-hidden/>{error}</p>}
           <div className="browser-key-actions">
             <Button variant="ghost" onClick={cancel} disabled={saving}>취소</Button>
-            <Button variant="primary" onClick={() => void save()} disabled={saving || !key.trim()}>
+            <Button variant="primary" onClick={() => void save()} disabled={saving || !ready}>
               {saving ? '설정하고 확인 중' : '설정하고 조회 확인'}<ShieldCheck size={16} aria-hidden/>
             </Button>
           </div>

@@ -10,8 +10,8 @@ import '../styles/connections.css';
 
 type Probe = { state: 'loading' | 'ready' | 'error'; message: string };
 
-/** Providers that need a user-issued official API key in browser/local-server mode. */
-const KEY_PROVIDERS: CredentialProvider[] = ['work24', 'saramin', 'jooble'];
+/** Providers that need user-issued official API credentials in browser/local-server mode. */
+const KEY_PROVIDERS: CredentialProvider[] = ['saramin', 'work24', 'jooble', 'wanted', 'jobalio'];
 const isKeyProvider = (source: JobSource): source is CredentialProvider => KEY_PROVIDERS.includes(source as CredentialProvider);
 
 /** Configuration and a real upstream request are deliberately separate checks.
@@ -90,14 +90,12 @@ export default function SourceConnections() {
   const keyControlsAvailable = !desktop && credentialStatus?.available;
 
   const statusMeta = (source: SourceOption) => {
-    if (source.enabled) return '공식 API 키 설정됨 · 아래에서 실제 응답을 확인할 수 있어요';
+    if (source.enabled) return '공식 API 설정됨 · 아래에서 실제 응답을 확인할 수 있어요';
     const hint = desktop
       ? ' 위의 연결 설정에서 키를 등록해주세요.'
       : keyControlsAvailable ? ' 위에서 발급받은 키를 설정해주세요.' : ' 서버의 .env.local에 키를 설정해주세요.';
-    if (source.id === 'saramin') return `API 키 미설정 · 현재 자동 조회할 수 없음.${hint}`;
-    if (source.id === 'work24') return `인증키 미설정 · 현재 자동 조회할 수 없음.${hint}`;
-    if (source.id === 'jooble') return `API 키 미설정 · 현재 자동 조회할 수 없음.${hint}`;
-    return '자동조회 미지원 · 원문 사이트에서 직접 확인하고 기록';
+    const guide = PROVIDER_GUIDES[source.id as CredentialProvider];
+    return `${guide.keyLabel} 미설정 · 현재 자동 조회할 수 없음.${hint}`;
   };
 
   return <div className="source-connections">
@@ -121,7 +119,11 @@ export default function SourceConnections() {
           {approved && keyProvider && <p className="connection-meta">{PROVIDER_GUIDES[source.id as CredentialProvider].org} 공식 API · {PROVIDER_GUIDES[source.id as CredentialProvider].envKey}</p>}
           {approved && (result ? <p className={`connection-result result-${result.state}`} role={result.state === 'error' ? 'alert' : 'status'}>{result.message}</p> : <p className="connection-meta">{statusMeta(source)}</p>)}
           {!approved && <p className="connection-manual">
-            API 키가 필요 없는 출처라는 뜻이 아니에요. 현재 JariZip에서 사용 권한이 확인된 공식 자동조회 API가 없어 키 설정과 자동조회를 제공하지 않습니다. 공고는 원문에서 확인해 <strong>공고 직접 추가</strong>로 기록할 수 있어요.
+            {source.note ? `${source.note} ` : ''}API 키가 필요 없는 출처라는 뜻이 아니에요.{' '}
+            {source.id === 'jobkorea'
+              ? '잡코리아 공식 API는 기관·서버 IP 승인 기반이라 JariZip이 그 승인 절차를 대신할 수 없어 자동 조회를 연결하지 않습니다.'
+              : '현재 JariZip에서 사용 권한이 확인된 공식 자동조회 API를 제공하지 않아 자동 조회를 연결하지 않습니다.'}{' '}
+            공고는 원문에서 확인해 <strong>공고 직접 추가</strong>로 기록할 수 있어요.
           </p>}
           {approved && keyProvider && keyControlsAvailable && <BrowserKeyControls
             provider={source.id as CredentialProvider}
@@ -138,10 +140,10 @@ export default function SourceConnections() {
     })}</ul>}
     {!loading && !error && !desktop && keyControlsAvailable && <p className="connection-footnote-storage">키는 서버가 필요한 경우 이 서버의 <code>.env.local</code>에 저장해 보관하고, 설정 즉시 공고 조회에 반영돼요. 키 값은 화면이나 로그로 다시 돌려주지 않고 설정 여부만 보여드려요. 이미 보관한 공고와 서류는 그대로 남아요. 서버 파일을 직접 관리하려면 <code>.env.example</code> 안내를 참고하세요.</p>}
     <p className="connection-footnote">{desktop
-      ? '데스크톱 앱에서는 위의 연결 설정에서 발급받은 키를 이 기기에만 저장해요. 사람인·고용24·조블 공식 API는 승인된 앱·사용 범위와 제공사가 정한 호출 한도를 따릅니다. 고용24 결과는 원문 링크와 출처 표시를 함께 제공해야 하며, 키만으로 재배포·자동 수집 허가가 되지는 않습니다. 다른 출처의 자동 수집 코드는 실행되지 않습니다.'
+      ? '데스크톱 앱에서는 위의 연결 설정에서 발급받은 값을 이 기기에만 저장해요. 사람인·고용24·조블·원티드·잡알리오 공식 API는 승인된 앱·사용 범위와 제공사가 정한 호출 한도를 따릅니다. 원티드 OpenAPI는 client-id·client-secret 두 값을, 잡알리오는 공공데이터포털 일반 인증키를 사용하며 목록만 조회합니다. 고용24 결과는 원문 링크와 출처 표시를 함께 제공해야 하며, 키만으로 재배포·자동 수집 허가가 되지는 않습니다. 점핏·직행은 승인된 공식 자동화 API가 없고, 잡코리아 공식 API는 기관·서버 IP 승인 기반이라 JariZip은 자동 조회를 연결하지 않습니다. 다른 출처의 자동 수집 코드는 실행되지 않습니다.'
       : keyControlsAvailable
-        ? '사람인·고용24·조블 공식 API는 서버가 위에서 설정한 개인 발급 키(SARAMIN_ACCESS_KEY·WORK24_AUTH_KEY·JOOBLE_API_KEY)를 .env.local에 보관한 경우에만 사용하며, 승인된 앱·사용 범위와 제공사가 정한 호출 한도를 따릅니다. 고용24 결과는 원문 링크와 출처 표시를 함께 제공해야 하며, 키만으로 재배포·자동 수집 허가가 되지는 않습니다. 원티드·점핏·직행은 승인된 공식 자동 API가 없어 원문 확인·직접 기록만 지원합니다. 다른 출처의 자동 수집 코드는 실행되지 않습니다.'
-        : '사람인·고용24·조블 공식 API는 서버에 각각 개인 발급 키(SARAMIN_ACCESS_KEY·WORK24_AUTH_KEY·JOOBLE_API_KEY)를 설정한 경우에만 사용하며, 승인된 앱·사용 범위와 제공사가 정한 호출 한도를 따릅니다. 고용24 결과는 원문 링크와 출처 표시를 함께 제공해야 합니다. 키만으로 재배포·자동 수집 허가가 되지는 않습니다. 원티드·점핏·직행은 승인된 공식 자동 API가 없어 원문 확인·직접 기록만 지원합니다. 다른 출처의 자동 수집 코드는 실행되지 않습니다.'}</p>
+        ? '사람인·고용24·조블·원티드·잡알리오 공식 API는 서버가 위에서 설정한 개인 발급 설정값(SARAMIN_ACCESS_KEY·WORK24_AUTH_KEY·JOOBLE_API_KEY·WANTED_CLIENT_ID·WANTED_CLIENT_SECRET·JOBALIO_SERVICE_KEY)을 .env.local에 보관한 경우에만 사용하며, 승인된 앱·사용 범위와 제공사가 정한 호출 한도를 따릅니다. 원티드는 두 값이 모두 있어야 동작하고, 잡알리오는 목록만 조회합니다. 고용24 결과는 원문 링크와 출처 표시를 함께 제공해야 하며, 키만으로 재배포·자동 수집 허가가 되지는 않습니다. 점핏·직행은 승인된 공식 자동화 API가 없고, 잡코리아 공식 API는 기관·서버 IP 승인 기반이라, 세 출처 모두 원문 확인·직접 기록만 지원합니다. 다른 출처의 자동 수집 코드는 실행되지 않습니다.'
+        : '사람인·고용24·조블·원티드·잡알리오 공식 API는 서버에 각각 개인 발급 설정값(SARAMIN_ACCESS_KEY·WORK24_AUTH_KEY·JOOBLE_API_KEY·WANTED_CLIENT_ID·WANTED_CLIENT_SECRET·JOBALIO_SERVICE_KEY)을 설정한 경우에만 사용하며, 승인된 앱·사용 범위와 제공사가 정한 호출 한도를 따릅니다. 잡알리오는 목록만 조회합니다. 고용24 결과는 원문 링크와 출처 표시를 함께 제공해야 합니다. 키만으로 재배포·자동 수집 허가가 되지는 않습니다. 점핏·직행은 승인된 공식 자동화 API가 없고, 잡코리아 공식 API는 기관·서버 IP 승인 기반이라, 세 출처 모두 원문 확인·직접 기록만 지원합니다. 다른 출처의 자동 수집 코드는 실행되지 않습니다.'}</p>
     <Link to="/app/discover" className="connection-link">채용 탐색으로 이동<ArrowUpRight size={15} aria-hidden/></Link>
   </div>;
 }

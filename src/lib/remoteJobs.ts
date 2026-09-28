@@ -2,20 +2,21 @@ import { parseRemoteJob } from './domain';
 import { canonicalJobUrl } from './jobSearch';
 import type { Job, WorkspaceState } from './types';
 
-export type JobSource = 'wanted' | 'saramin' | 'jumpit' | 'zighang' | 'work24' | 'jooble';
+export type JobSource = 'wanted' | 'saramin' | 'jumpit' | 'zighang' | 'jobkorea' | 'work24' | 'jooble' | 'jobalio';
 export type SearchSource = JobSource | 'all';
 export interface SourceResult { id: JobSource; name: string; count: number; status: 'ok' | 'error'; message?: string; exhausted?: boolean; scannedPages?: number }
 export interface SearchResult { jobs: Job[]; nextPage: number | null; checkedAt: string; warnings: string[]; cached: boolean; total?: number; sourceResults: SourceResult[]; nextCursor?: string | null }
 export interface SourceOption { id: JobSource; name: string; enabled: boolean; note: string }
-const providers: JobSource[] = ['wanted', 'saramin', 'jumpit', 'zighang', 'work24', 'jooble'];
+const providers: JobSource[] = ['saramin', 'work24', 'jooble', 'wanted', 'jobalio', 'jumpit', 'zighang', 'jobkorea'];
 
 /**
  * Only providers with an official, permission-based API may be queried at runtime.
- * Wanted/Jumpit/Zighang have no obtained permission, so the client never calls them even
- * if a stale or tampered source list marks them enabled. No click, checkbox or env flag
+ * Jumpit/Zighang have no approved API, and JobKorea's official API is issued per
+ * organization with a registered server IP, so the client never calls them even if a
+ * stale or tampered source list marks them enabled. No click, checkbox or env flag
  * grants that permission. This mirrors the server-side block and fails before any network.
  */
-export const APPROVED_JOB_SOURCES: readonly JobSource[] = ['saramin', 'work24', 'jooble'];
+export const APPROVED_JOB_SOURCES: readonly JobSource[] = ['saramin', 'work24', 'jooble', 'wanted', 'jobalio'];
 export const isApprovedSource = (source: JobSource): boolean => APPROVED_JOB_SOURCES.includes(source);
 
 /** Official public sites for normal outbound navigation. Never used for automated collection. */
@@ -24,8 +25,10 @@ export const SOURCE_SITES: Record<JobSource, { name: string; url: string }> = {
   work24: { name: '고용24', url: 'https://www.work24.go.kr/' },
   jooble: { name: '조블', url: 'https://kr.jooble.org/' },
   wanted: { name: '원티드', url: 'https://www.wanted.co.kr/' },
+  jobalio: { name: '잡알리오', url: 'https://job.alio.go.kr/' },
   jumpit: { name: '점핏', url: 'https://jumpit.saramin.co.kr/' },
   zighang: { name: '직행', url: 'https://zighang.com/' },
+  jobkorea: { name: '잡코리아', url: 'https://www.jobkorea.co.kr/' },
 };
 
 const UNAPPROVED_MESSAGE = '이 출처는 제공사의 사전 승인 없이 자동으로 조회하지 않아요. 원문 사이트에서 직접 확인하고 보관해주세요.';
@@ -75,14 +78,14 @@ export async function searchRemoteJobs(source: SearchSource, query: string, loca
 // secret back: they accept a key, return booleans, and are only used when the
 // desktop bridge is absent.
 
-export type CredentialProvider = 'work24' | 'saramin' | 'jooble';
+export type CredentialProvider = 'saramin' | 'work24' | 'jooble' | 'wanted' | 'jobalio';
 
 export interface CredentialStatus {
   available: boolean;
   providers: Record<CredentialProvider, boolean>;
 }
 
-const CREDENTIAL_PROVIDERS: CredentialProvider[] = ['work24', 'saramin', 'jooble'];
+const CREDENTIAL_PROVIDERS: CredentialProvider[] = ['saramin', 'work24', 'jooble', 'wanted', 'jobalio'];
 
 function parseCredentialProviders(value: unknown): Record<CredentialProvider, boolean> | null {
   if (!Array.isArray(value)) return null;
@@ -104,7 +107,7 @@ function credentialError(error: unknown): never {
   throw new Error(typeof message === 'string' ? message : 'API 키 설정을 처리하지 못했어요.');
 }
 
-async function credentialRequest(method: 'GET' | 'PUT' | 'DELETE', provider: CredentialProvider | null, key: string | null): Promise<Record<CredentialProvider, boolean>> {
+async function credentialRequest(method: 'GET' | 'PUT' | 'DELETE', provider: CredentialProvider | null, values: string | Record<string, string> | null): Promise<Record<CredentialProvider, boolean>> {
   const path = provider ? `/credentials/${provider}` : '/credentials';
   let response: Response;
   try {
@@ -112,7 +115,7 @@ async function credentialRequest(method: 'GET' | 'PUT' | 'DELETE', provider: Cre
       method,
       signal: AbortSignal.timeout(15000),
       headers: { Accept: 'application/json', ...(method === 'PUT' ? { 'Content-Type': 'application/json' } : {}) },
-      ...(method === 'PUT' ? { body: JSON.stringify({ key }) } : {}),
+      ...(method === 'PUT' ? { body: JSON.stringify(typeof values === 'string' ? { key: values } : { fields: values }) } : {}),
     });
   } catch {
     throw new Error('API 키 설정 서버에 연결하지 못했어요. 서버 실행 상태를 확인해주세요.');
@@ -142,9 +145,9 @@ export async function fetchCredentialStatus(signal?: AbortSignal): Promise<Crede
   return { available: true, providers };
 }
 
-/** PUT one provider key. Resolves to the fresh status booleans. */
-export async function saveCredential(provider: CredentialProvider, key: string): Promise<Record<CredentialProvider, boolean>> {
-  return credentialRequest('PUT', provider, key);
+/** PUT one provider's configuration. A string is sent as `{ key }`; a map as `{ fields }`. */
+export async function saveCredential(provider: CredentialProvider, values: string | Record<string, string>): Promise<Record<CredentialProvider, boolean>> {
+  return credentialRequest('PUT', provider, values);
 }
 
 /** DELETE one provider key. Resolves to the fresh status booleans. */

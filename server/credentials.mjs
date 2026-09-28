@@ -1,11 +1,15 @@
 // Browser/local-server credential store.
 //
 // In normal browser and `npm run dev`/`npm start` mode there is no Electron
-// `safeStorage`, so Work24/Saramin keys are persisted into the project's
-// `.env.local` file. The same env object handed to `createJobService` is mutated
-// in place, so a saved key is live immediately without a restart. Values are
+// `safeStorage`, so the approved providers' configuration fields are persisted into
+// the project's `.env.local` file. The same env object handed to `createJobService` is
+// mutated in place, so a saved key is live immediately without a restart. Values are
 // never returned to the renderer, logged, or placed in a URL — callers only ever
 // see booleans from `providers()`.
+//
+// A provider may need one field (Saramin, Work24, Jooble, JOB-ALIO) or several
+// (Wanted OpenAPI needs a client id and a client secret). `set()` accepts either a
+// single string for a one-field provider or a `{ field: value }` map for any provider.
 //
 // The Electron desktop shell deliberately keeps its own encrypted store and IPC
 // bridge; `createAppServer` exposes no credential route unless a store is passed
@@ -14,11 +18,25 @@ import { randomBytes } from 'node:crypto';
 import { chmodSync, existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
 import { dirname } from 'node:path';
 
-/** Officially approved providers only. Wanted/Jumpit/Zighang have no agreed API permission. */
-export const PROVIDERS = Object.freeze(['work24', 'saramin', 'jooble']);
-/** Environment variable each provider adapter reads at request time. */
-export const PROVIDER_ENV = Object.freeze({ work24: 'WORK24_AUTH_KEY', saramin: 'SARAMIN_ACCESS_KEY', jooble: 'JOOBLE_API_KEY' });
-/** Longest accepted credential. Real Work24/Saramin keys are far shorter; this only bounds abuse. */
+/** Officially approved providers only. Jumpit/Zighang have no approved API and JobKorea's official API is organization/server-IP approval based, so none are credential providers here. */
+export const PROVIDERS = Object.freeze(['saramin', 'work24', 'jooble', 'wanted', 'jobalio']);
+/**
+ * Required configuration fields per provider. `name` is the renderer-facing field key,
+ * `env` is the environment variable the adapter reads at request time.
+ */
+export const PROVIDER_FIELDS = Object.freeze({
+  saramin: Object.freeze([Object.freeze({ name: 'accessKey', env: 'SARAMIN_ACCESS_KEY' })]),
+  work24: Object.freeze([Object.freeze({ name: 'authKey', env: 'WORK24_AUTH_KEY' })]),
+  jooble: Object.freeze([Object.freeze({ name: 'apiKey', env: 'JOOBLE_API_KEY' })]),
+  wanted: Object.freeze([
+    Object.freeze({ name: 'clientId', env: 'WANTED_CLIENT_ID' }),
+    Object.freeze({ name: 'clientSecret', env: 'WANTED_CLIENT_SECRET' }),
+  ]),
+  jobalio: Object.freeze([Object.freeze({ name: 'serviceKey', env: 'JOBALIO_SERVICE_KEY' })]),
+});
+/** Provider -> list of environment variable names (kept for callers that just mirror env). */
+export const PROVIDER_ENV = Object.freeze(Object.fromEntries(PROVIDERS.map(provider => [provider, PROVIDER_FIELDS[provider].map(field => field.env)])));
+/** Longest accepted credential. Real keys are far shorter; this only bounds abuse. */
 export const MAX_KEY_LENGTH = 512;
 /** Upper bound for a credential request body, in bytes. */
 export const MAX_BODY_BYTES = 4096;
@@ -34,9 +52,17 @@ export class CredentialError extends Error {
   }
 }
 
+const providerList = provider => PROVIDER_FIELDS[provider] || [];
+
+/** Human-readable provider list for errors. */
+const providerNames = () => PROVIDERS.map(provider => {
+  const fields = providerList(provider).map(field => field.env).join('·');
+  return `${provider}(${fields})`;
+}).join(', ');
+
 export function normalizeProvider(value) {
   if (typeof value !== 'string' || !PROVIDERS.includes(value)) {
-    throw new CredentialError('BAD_PROVIDER', 'API 키는 고용24(work24)·사람인(saramin)·조블(jooble)에만 설정할 수 있어요.');
+    throw new CredentialError('BAD_PROVIDER', `API 설정은 ${providerNames()}에만 저장할 수 있어요.`);
   }
   return value;
 }
@@ -58,6 +84,27 @@ export function normalizeKey(value) {
   // eslint-disable-next-line no-control-regex
   if (/[\u0000-\u001f\u007f']/.test(key)) throw new CredentialError('BAD_KEY', 'API 키에 사용할 수 없는 문자가 있어요.');
   return key;
+}
+
+/**
+ * Normalize one provider's configuration into a `{ fieldName: value }` record.
+ * A bare string is accepted only for single-field providers so existing callers and
+ * one-key adapters keep working; every declared field must be present.
+ */
+export function normalizeFields(provider, input) {
+  const id = normalizeProvider(provider);
+  const fields = providerList(id);
+  if (typeof input === 'string') {
+    if (fields.length !== 1) throw new CredentialError('BAD_KEY', `${id}는 ${fields.length}개의 설정값이 필요해요.`);
+    return { [fields[0].name]: normalizeKey(input) };
+  }
+  if (!input || typeof input !== 'object' || Array.isArray(input)) throw new CredentialError('BAD_KEY', 'API 설정값을 확인해주세요.');
+  const record = {};
+  for (const field of fields) {
+    if (!Object.hasOwn(input, field.name)) throw new CredentialError('BAD_KEY', `${id}의 ${field.env} 값을 입력해주세요.`);
+    record[field.name] = normalizeKey(input[field.name]);
+  }
+  return record;
 }
 
 const escapeForPattern = value => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -102,26 +149,31 @@ export function createEnvCredentialStore({ file, env = process.env, logger = con
 
   /** Status only: booleans, never the secret value or the env-file contents. */
   function configured(provider) {
-    return Boolean(env[PROVIDER_ENV[provider]]);
+    return providerList(provider).every(field => Boolean(env[field.env]));
   }
 
   function providers() {
     return PROVIDERS.map(provider => ({ provider, configured: configured(provider) }));
   }
 
-  function set(provider, key) {
+  function set(provider, values) {
     const id = normalizeProvider(provider);
-    const value = normalizeKey(key);
-    writeFile(patchEnvText(readFile(), PROVIDER_ENV[id], value));
-    env[PROVIDER_ENV[id]] = value;
-    return { provider: id, configured: true };
+    const record = normalizeFields(id, values);
+    for (const field of providerList(id)) {
+      const value = record[field.name];
+      writeFile(patchEnvText(readFile(), field.env, value));
+      env[field.env] = value;
+    }
+    return { provider: id, configured: configured(id) };
   }
 
   function clear(provider) {
     const id = normalizeProvider(provider);
     const removed = configured(id);
-    writeFile(patchEnvText(readFile(), PROVIDER_ENV[id], null));
-    delete env[PROVIDER_ENV[id]];
+    for (const field of providerList(id)) {
+      writeFile(patchEnvText(readFile(), field.env, null));
+      delete env[field.env];
+    }
     return { provider: id, configured: false, removed };
   }
 

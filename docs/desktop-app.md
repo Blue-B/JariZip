@@ -6,7 +6,7 @@
 
 1. 설치 파일 또는 포터블 EXE를 실행합니다. Node.js 설치는 필요하지 않습니다.
 2. 앱이 `127.0.0.1:4178`에만 열리는 로컬 서버를 먼저 시작하고, 그 주소를 창에 불러옵니다. 같은 포트가 이미 사용 중이면 저장 위치가 바뀌지 않도록 임시 포트로 이동하지 않고 종료 방법을 안내합니다.
-3. 첫 실행 안내에서 고용24·사람인·조블 중 하나를 골라 발급받은 키를 붙여넣습니다.
+3. 첫 실행 안내에서 고용24·사람인·조블·원티드·잡알리오 중 하나를 골라 발급받은 설정값을 붙여넣습니다. 원티드는 client-id와 client-secret 두 값을 함께 입력합니다.
 4. 키는 이 PC의 OS 보안 저장소로 암호화되어 `userData` 폴더에 저장되고, 화면에서는 즉시 지워집니다.
 
 브라우저 저장소(IndexedDB)에 보관되는 서류·메모·지원 기록은 기존과 동일하게 그대로 유지됩니다. `localhost:4178` 브라우저 실행 모드와 데스크톱 앱은 같은 화면과 API를 사용합니다.
@@ -19,12 +19,12 @@
 - `window.jarizipDesktop`에는 다음 다섯 개만 노출합니다.
   - `getPlatform()` → `{ platform, version }`
   - `getApiKeyStatus()` → `{ providers: [{ provider, configured }], encryptionAvailable }` (키 원문 없음)
-  - `setApiKey(provider, key)`
+  - `setApiKey(provider, values)`. `values`는 한 개 필드면 문자열, 여러 필드(원티드)면 `{ clientId, clientSecret }` 같은 객체입니다.
   - `clearApiKey(provider)`
   - `openExternal(url)` → `https:`만
-- `provider`는 `work24`·`saramin`·`jooble` 세 개만 허용합니다. 원티드·점핏·직행은 공식 API 승인이 없어 저장 자체를 거부합니다.
-- 키 값은 로그·URL·오류 메시지·브라우저 저장소·백업에 남기지 않습니다. `JOOBLE_API_KEY`는 요청 URL 경로에만 쓰고 응답·오류에 돌려주지 않습니다. 복호화된 값은 main 프로세스 안에서만 존재하고, 기존에 만들어진 job 서비스가 바로 읽도록 `process.env`(`WORK24_AUTH_KEY`/`SARAMIN_ACCESS_KEY`/`JOOBLE_API_KEY`)에만 반영합니다. 앱을 재시작할 필요가 없습니다.
-- 입력 검증: provider 화이트리스트, 키 trim·빈값 거부·최대 512자·제어문자 거부. 외부 URL은 `https:` 절대 주소만 허용합니다.
+- `provider`는 `saramin`·`work24`·`jooble`·`wanted`·`jobalio` 다섯 개만 허용합니다. 점핏·직행은 공식 자동화 API가 없고, 잡코리아는 공식 API가 기관·서버 IP 승인 기반이라, JariZip은 세 출처의 자동화 설정을 저장하지 않습니다.
+- 값은 로그·URL·오류 메시지·브라우저 저장소·백업에 남기지 않습니다. `JOOBLE_API_KEY`는 요청 URL 경로에만 쓰고 응답·오류에 돌려주지 않습니다. 원티드의 두 값은 `wanted-client-id`·`wanted-client-secret` 헤더로만 전송합니다. 복호화된 값은 main 프로세스 안에서만 존재하고, 기존에 만들어진 job 서비스가 바로 읽도록 `process.env`(`WORK24_AUTH_KEY`/`SARAMIN_ACCESS_KEY`/`JOOBLE_API_KEY`/`WANTED_CLIENT_ID`/`WANTED_CLIENT_SECRET`/`JOBALIO_SERVICE_KEY`)에만 반영합니다. 앱을 재시작할 필요가 없습니다.
+- 입력 검증: provider 화이트리스트, 필드 trim·빈값 거부·최대 512자·제어문자 거부. 외부 URL은 `https:` 절대 주소만 허용합니다.
 
 ## 저장 위치
 

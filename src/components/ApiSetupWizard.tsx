@@ -160,10 +160,11 @@ interface ApiSetupWizardProps {
 
 function ApiSetupWizard({ bridge, status, onRefreshStatus, onClose, onAddManual, onBrowse }: ApiSetupWizardProps) {
   const { notify } = useWorkspace();
-  const [stage, setStage] = useState<Stage>(() => (status?.work24 || status?.saramin) ? 'overview' : 'choose');
-  const [provider, setProvider] = useState<ApiProvider>(() => status?.work24 ? 'work24' : status?.saramin ? 'saramin' : status?.jooble ? 'jooble' : 'work24');
-  // The key only lives here while the user is typing or retrying a failed save.
-  const [key, setKey] = useState('');
+  const configuredIds = status ? (Object.keys(PROVIDERS) as ApiProvider[]).filter(id => status[id]) : [];
+  const [stage, setStage] = useState<Stage>(() => configuredIds.length ? 'overview' : 'choose');
+  const [provider, setProvider] = useState<ApiProvider>(() => configuredIds[0] ?? 'work24');
+  // Values only live here while the user is typing or retrying a failed save.
+  const [values, setValues] = useState<Record<string, string>>({});
   const [showKey, setShowKey] = useState(false);
   const [keySaved, setKeySaved] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -182,16 +183,18 @@ function ApiSetupWizard({ bridge, status, onRefreshStatus, onClose, onAddManual,
   }, []);
 
   const guide = PROVIDERS[provider];
+  const multiField = guide.fields.length > 1;
+  const ready = guide.fields.every(field => (values[field.name] ?? '').trim().length > 0);
 
   function begin(id: ApiProvider) {
     setProvider(id);
-    setKey('');
+    setValues({});
     setShowKey(false);
     setKeySaved(false);
     setError('');
     setSourceEnabled(null);
     setStage('connect');
-    // Focus lands on the key field after the panel paints.
+    // Focus lands on the first key field after the panel paints.
     window.requestAnimationFrame(() => inputRef.current?.focus());
   }
 
@@ -204,9 +207,9 @@ function ApiSetupWizard({ bridge, status, onRefreshStatus, onClose, onAddManual,
   }
 
   async function connect(alreadySaved = false) {
-    const value = key.trim();
-    if (!alreadySaved && !value) {
-      setError('발급받은 키를 입력해주세요.');
+    const input = Object.fromEntries(guide.fields.map(field => [field.name, (values[field.name] ?? '').trim()]));
+    if (!alreadySaved && guide.fields.some(field => !input[field.name])) {
+      setError('발급받은 설정값을 모두 입력해주세요.');
       inputRef.current?.focus();
       return;
     }
@@ -220,11 +223,11 @@ function ApiSetupWizard({ bridge, status, onRefreshStatus, onClose, onAddManual,
     let handedOff = alreadySaved || keySaved;
     try {
       if (!alreadySaved && !keySaved) {
-        const saved = await bridge.setApiKey(provider, value);
-        // The desktop shell owns the key now; drop it from React state at once.
+        const saved = await bridge.setApiKey(provider, multiField ? input : input[guide.fields[0].name]);
+        // The desktop shell owns the values now; drop them from React state at once.
         handedOff = true;
-        setKey('');
-        if (!saved.ok) throw new Error(saved.message || '키를 저장하지 못했어요. 다시 확인해주세요.');
+        setValues({});
+        if (!saved.ok) throw new Error(saved.message || '설정값을 저장하지 못했어요. 다시 확인해주세요.');
         setKeySaved(true);
         // Surface the saved key in Settings even if the live check then fails.
         await onRefreshStatus();
@@ -251,7 +254,7 @@ function ApiSetupWizard({ bridge, status, onRefreshStatus, onClose, onAddManual,
       setError(problem instanceof Error ? problem.message : '연결을 확인하지 못했어요. 잠시 후 다시 시도해주세요.');
       setStage('connect');
     } finally {
-      if (handedOff) setKey('');
+      if (handedOff) setValues({});
       if (aliveRef.current) setSaving(false);
     }
   }
@@ -316,7 +319,7 @@ function ApiSetupWizard({ bridge, status, onRefreshStatus, onClose, onAddManual,
         </>}
 
         {stage === 'connect' && <>
-          <button type="button" className="api-setup-back" onClick={() => { setStage('choose'); setError(''); setKey(''); setKeySaved(false); }}>← 출처 다시 고르기</button>
+          <button type="button" className="api-setup-back" onClick={() => { setStage('choose'); setError(''); setValues({}); setKeySaved(false); }}>← 출처 다시 고르기</button>
           <ol className="api-setup-steps">
             {guide.steps.map(step => <li key={step}>{step}</li>)}
           </ol>
@@ -324,36 +327,36 @@ function ApiSetupWizard({ bridge, status, onRefreshStatus, onClose, onAddManual,
             {guide.pageLabel}<ArrowUpRight size={15} aria-hidden/>
           </Button>
           {keySaved
-            ? <p className="api-setup-saved-note" role="status">키는 이미 이 기기에 저장됐어요. 다시 붙여넣을 필요 없이 아래에서 연결을 다시 확인할 수 있어요.</p>
-            : <label className="api-setup-field">
-                <span>{guide.name} {guide.keyLabel}</span>
-                <span className="field-hint">붙여넣은 키는 저장한 뒤 이 화면에서 바로 지워지고, 브라우저 저장소나 백업 파일에는 남지 않아요.</span>
+            ? <p className="api-setup-saved-note" role="status">설정값은 이미 이 기기에 저장됐어요. 다시 붙여넣을 필요 없이 아래에서 연결을 다시 확인할 수 있어요.</p>
+            : guide.fields.map((field, index) => <label className="api-setup-field" key={field.name}>
+                <span>{multiField ? `${guide.name} ${field.label}` : `${guide.name} ${guide.keyLabel}`}</span>
+                <span className="field-hint">{multiField ? `${field.env}에 저장할 값을 붙여넣어요. 저장한 뒤 이 화면에서 바로 지워져요.` : '붙여넣은 값은 저장한 뒤 이 화면에서 바로 지워지고, 브라우저 저장소나 백업 파일에는 남지 않아요.'}</span>
                 <span className="api-setup-input">
                   <KeyRound size={17} aria-hidden/>
                   <input
-                    ref={inputRef}
+                    ref={index === 0 ? inputRef : undefined}
                     type={showKey ? 'text' : 'password'}
-                    value={key}
-                    onChange={event => setKey(event.target.value)}
+                    value={values[field.name] ?? ''}
+                    onChange={event => setValues(current => ({ ...current, [field.name]: event.target.value }))}
                     onKeyDown={event => { if (event.key === 'Enter') { event.preventDefault(); void connect(); } }}
-                    placeholder="발급받은 키를 붙여넣기"
-                    aria-label={`${guide.name} API 키`}
+                    placeholder={`${field.label} 붙여넣기`}
+                    aria-label={multiField ? `${guide.name} ${field.label}` : `${guide.name} API 키`}
                     autoComplete="off"
                     autoCorrect="off"
                     autoCapitalize="off"
                     spellCheck={false}
-                    maxLength={200}
-                    name="api-key"
+                    maxLength={512}
+                    name={`api-field-${provider}-${field.name}`}
                   />
                   <button type="button" className="api-setup-reveal" aria-label={showKey ? '키 가리기' : '키 보기'} aria-pressed={showKey} onClick={() => setShowKey(value => !value)}>
                     {showKey ? <EyeOff size={17} aria-hidden/> : <Eye size={17} aria-hidden/>}
                   </button>
                 </span>
-              </label>}
+              </label>)}
           {error && <p className="api-setup-error" role="alert"><CircleAlert size={16} aria-hidden/>{error}</p>}
           <div className="api-setup-foot">
             <Button variant="ghost" onClick={onClose} disabled={saving}>나중에 하기</Button>
-            <Button variant="primary" onClick={() => void connect(keySaved)} disabled={saving || (!keySaved && !key.trim())}>
+            <Button variant="primary" onClick={() => void connect(keySaved)} disabled={saving || (!keySaved && !ready)}>
               {keySaved ? '연결 다시 확인' : '저장하고 연결 확인'}<ShieldCheck size={16} aria-hidden/>
             </Button>
           </div>

@@ -69,7 +69,7 @@ test('a key saved to a temp dir persists, updates the live env, and clears again
   await withTemp(async directory => {
     const env = {};
     const credentials = createEnvCredentialStore({ file: join(directory, ENV_FILE), env, logger: { warn() {} } });
-    assert.deepEqual(credentials.providers(), [{ provider: 'work24', configured: false }, { provider: 'saramin', configured: false }, { provider: 'jooble', configured: false }]);
+    assert.deepEqual(credentials.providers(), [{ provider: 'saramin', configured: false }, { provider: 'work24', configured: false }, { provider: 'jooble', configured: false }, { provider: 'wanted', configured: false }, { provider: 'jobalio', configured: false }]);
 
     credentials.set('work24', WORK24_KEY);
     // Written to disk and to the exact env object the job service reads.
@@ -110,18 +110,48 @@ test('credential writes are atomic and restrictive on POSIX', { skip: process.pl
   });
 });
 
-test('only work24, saramin and jooble are accepted and bad providers, keys or bodies are refused', async () => {
+test('only the approved providers are accepted and bad providers, keys or bodies are refused', async () => {
   await withTemp(async directory => {
     const { base, close } = await start(directory);
     try {
+      // Wanted needs both documented fields, so a bare string is refused.
       assert.equal((await put(base, 'wanted', 'x')).status, 400);
+      assert.equal((await put(base, 'jumpit', 'x')).status, 400);
       assert.equal((await put(base, 'work24', '')).status, 400);
       assert.equal((await fetch(`${base}/api/credentials/work24`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: 'not json' })).status, 400);
       assert.equal((await fetch(`${base}/api/credentials/work24`, { method: 'PUT', headers: { 'Content-Type': 'text/plain' }, body: JSON.stringify({ key: WORK24_KEY }) })).status, 415);
       assert.equal((await fetch(`${base}/api/credentials/work24`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ key: 7 }) })).status, 400);
+      assert.equal((await fetch(`${base}/api/credentials/wanted`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ fields: { clientId: 'only-one' } }) })).status, 400);
       assert.equal((await fetch(`${base}/api/credentials/work24`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' } })).status, 405);
       assert.equal((await fetch(`${base}/api/credentials`, { method: 'PUT', headers: { 'Content-Type': 'application/json' } })).status, 405);
       assert.equal((await status(base)).status, 200);
+    } finally { await close(); }
+  });
+});
+
+test('Wanted saves its two documented fields together and JOB-ALIO saves one key', async () => {
+  await withTemp(async directory => {
+    const { base, env, close } = await start(directory);
+    try {
+      const saved = await fetch(`${base}/api/credentials/wanted`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ fields: { clientId: 'test-client-id', clientSecret: 'test-client-secret' } }) });
+      assert.equal(saved.status, 200);
+      assert.equal(env.WANTED_CLIENT_ID, 'test-client-id');
+      assert.equal(env.WANTED_CLIENT_SECRET, 'test-client-secret');
+      assert.equal((await saved.json()).configured, true);
+      const body = await readFile(join(directory, ENV_FILE), 'utf8');
+      assert.match(body, /WANTED_CLIENT_ID='test-client-id'/);
+      assert.match(body, /WANTED_CLIENT_SECRET='test-client-secret'/);
+
+      const jobalio = await put(base, 'jobalio', 'test-jobalio-service-key');
+      assert.equal(jobalio.status, 200);
+      assert.equal(env.JOBALIO_SERVICE_KEY, 'test-jobalio-service-key');
+      const after = Object.fromEntries((await (await sources(base)).json()).sources.map(source => [source.id, source.enabled]));
+      assert.equal(after.wanted, true); assert.equal(after.jobalio, true);
+
+      await del(base, 'wanted');
+      assert.equal(env.WANTED_CLIENT_ID, undefined); assert.equal(env.WANTED_CLIENT_SECRET, undefined);
+      const cleared = Object.fromEntries((await (await sources(base)).json()).sources.map(source => [source.id, source.enabled]));
+      assert.equal(cleared.wanted, false); assert.equal(cleared.jobalio, true);
     } finally { await close(); }
   });
 });
@@ -150,7 +180,7 @@ test('responses never contain the secret value', async () => {
       const saved = await put(base, 'work24', WORK24_KEY);
       const savedText = await saved.text();
       assert.doesNotMatch(savedText, new RegExp(WORK24_KEY));
-      assert.deepEqual(JSON.parse(savedText).providers, [{ provider: 'work24', configured: true }, { provider: 'saramin', configured: false }, { provider: 'jooble', configured: false }]);
+      assert.deepEqual(JSON.parse(savedText).providers, [{ provider: 'saramin', configured: false }, { provider: 'work24', configured: true }, { provider: 'jooble', configured: false }, { provider: 'wanted', configured: false }, { provider: 'jobalio', configured: false }]);
       const listed = await (await status(base)).text();
       assert.doesNotMatch(listed, new RegExp(WORK24_KEY));
       const cleared = await (await del(base, 'work24')).text();

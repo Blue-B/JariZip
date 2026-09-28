@@ -11,14 +11,16 @@ interface FakeBridgeOptions {
   work24?: boolean;
   saramin?: boolean;
   jooble?: boolean;
+  wanted?: boolean;
+  jobalio?: boolean;
   /** Fail the first setApiKey call with this message (once). */
   failSaveOnce?: string;
 }
 
 async function injectBridge(page: Page, options: FakeBridgeOptions = {}) {
-  const { work24 = false, saramin = false, jooble = false, failSaveOnce } = options;
+  const { work24 = false, saramin = false, jooble = false, wanted = false, jobalio = false, failSaveOnce } = options;
   await page.addInitScript(({ initial, failSave }) => {
-    const status = { work24: initial.work24, saramin: initial.saramin, jooble: initial.jooble };
+    const status = { saramin: initial.saramin, work24: initial.work24, jooble: initial.jooble, wanted: initial.wanted, jobalio: initial.jobalio };
     const calls: Array<{ method: string; provider?: string; url?: string; keyLength?: number }> = [];
     const keyValues: string[] = [];
     let failed = false;
@@ -26,15 +28,15 @@ async function injectBridge(page: Page, options: FakeBridgeOptions = {}) {
     (window as unknown as { __jarizipKeyValuesSeen: string[] }).__jarizipKeyValuesSeen = keyValues;
     (window as unknown as { jarizipDesktop: unknown }).jarizipDesktop = {
       getInfo: async () => { calls.push({ method: 'getInfo' }); return { platform: 'win32', version: '0.1.0-test' }; },
-      getApiKeyStatus: async () => { calls.push({ method: 'getApiKeyStatus' }); return { work24: status.work24, saramin: status.saramin, jooble: status.jooble }; },
-      setApiKey: async (provider: 'work24' | 'saramin' | 'jooble', key: string) => {
-        calls.push({ method: 'setApiKey', provider, keyLength: key.length });
-        keyValues.push(key);
+      getApiKeyStatus: async () => { calls.push({ method: 'getApiKeyStatus' }); return { ...status }; },
+      setApiKey: async (provider: 'saramin' | 'work24' | 'jooble' | 'wanted' | 'jobalio', values: string | Record<string, string>) => {
+        calls.push({ method: 'setApiKey', provider, keyLength: typeof values === 'string' ? values.length : JSON.stringify(values).length });
+        if (typeof values === 'string') keyValues.push(values);
         if (failSave && !failed) { failed = true; return { ok: false, message: failSave }; }
         status[provider] = true;
         return { ok: true };
       },
-      clearApiKey: async (provider: 'work24' | 'saramin' | 'jooble') => {
+      clearApiKey: async (provider: 'saramin' | 'work24' | 'jooble' | 'wanted' | 'jobalio') => {
         calls.push({ method: 'clearApiKey', provider });
         status[provider] = false;
         return { ok: true };
@@ -42,7 +44,7 @@ async function injectBridge(page: Page, options: FakeBridgeOptions = {}) {
       openExternal: async (url: string) => { calls.push({ method: 'openExternal', url }); },
       __readStatus: () => ({ ...status }),
     };
-  }, { initial: { work24, saramin, jooble }, failSave: failSaveOnce ?? null });
+  }, { initial: { work24, saramin, jooble, wanted, jobalio }, failSave: failSaveOnce ?? null });
 }
 
 async function mockJobApi(page: Page, options: { failProbe?: string } = {}) {
@@ -50,7 +52,7 @@ async function mockJobApi(page: Page, options: { failProbe?: string } = {}) {
   await page.route('**/api/sources', route => route.fulfill({ json: { sources: [
     { id: 'work24', name: '고용24', enabled: true, note: '고용24 공식 Open API 인증키 설정됨' },
     { id: 'saramin', name: '사람인', enabled: true, note: '공식 API 연결 설정됨' },
-    { id: 'wanted', name: '원티드', enabled: false, note: '제공사 사전 승인 없음' },
+    { id: 'jobkorea', name: '잡코리아', enabled: false, note: '공식 API는 기관·서버 IP 승인 기반' },
   ] } }));
   await page.route('**/api/jobs?**', route => {
     const url = new URL(route.request().url());

@@ -37,7 +37,7 @@ function registerIpcHandlers(context) {
   })));
 
   ipcMain.handle(CHANNELS.setApiKey, (_event, payload) => {
-    try { return ok(setProviderKey(context, payload?.provider, payload?.key)); }
+    try { return ok(setProviderKey(context, payload?.provider, payload?.fields ?? payload?.key)); }
     catch (error) { return fail(error); }
   });
 
@@ -118,7 +118,7 @@ async function runSmokeTest(window, store, env) {
     };
   })()`);
   // The synthetic key must exist nowhere: not in the store, not in the environment, not in stdout.
-  const envVariables = ['WORK24_AUTH_KEY', 'SARAMIN_ACCESS_KEY', 'JOOBLE_API_KEY'];
+  const envVariables = ['SARAMIN_ACCESS_KEY', 'WORK24_AUTH_KEY', 'JOOBLE_API_KEY', 'WANTED_CLIENT_ID', 'WANTED_CLIENT_SECRET', 'JOBALIO_SERVICE_KEY'];
   const leakedEnv = envVariables.filter(name => String(env[name] ?? '').includes('smoke-test-key'));
   const stillStored = store.get('work24') !== null;
   const { status, ...reportable } = result;

@@ -24,13 +24,18 @@ describe('multiple source identity', () => {
     expect(canRefreshJob({ id: 'jooble-123', sourceUrl: 'https://www.saramin.co.kr/zf_user/jobs/relay/view?rec_idx=789' })).toBe(false);
     expect(canProbeSource('jooble')).toBe(true);
   });
+  it('treats JOB-ALIO as list-only and never maps its outbound original link back to a detail call', () => {
+    expect(sourceIdentity({ sourceUrl: 'https://job.alio.go.kr/recruitview.do?idx=305307' })).toBeNull();
+    expect(canRefreshJob({ id: 'jobalio-305307', sourceUrl: 'https://job.alio.go.kr/recruitview.do?idx=305307' })).toBe(false);
+    expect(canProbeSource('jobalio')).toBe(true);
+  });
 });
 
 describe('unapproved source runtime block', () => {
   it('never issues a search request for an unapproved source, even when a stale list marks it enabled', async () => {
     const mock = vi.fn();
     vi.stubGlobal('fetch', mock);
-    for (const source of ['wanted', 'jumpit', 'zighang'] as const) {
+    for (const source of ['jumpit', 'zighang', 'jobkorea'] as const) {
       await expect(searchRemoteJobs(source, '', 'all', 0)).rejects.toThrow('제공사의 사전 승인 없이');
       await expect(probeSource(source)).rejects.toThrow('제공사의 사전 승인 없이');
     }
@@ -39,12 +44,16 @@ describe('unapproved source runtime block', () => {
   it('reports which saved postings may be re-queried and blocks the rest before network', async () => {
     expect(canRefreshJob({ sourceUrl: 'https://www.saramin.co.kr/zf_user/jobs/relay/view?rec_idx=789' })).toBe(true);
     expect(canRefreshJob({ sourceUrl: 'https://www.work24.go.kr/wk/a/b/1500/empDetailAuthView.do?wantedAuthNo=KJAS002609110001' })).toBe(true);
-    expect(canProbeSource('saramin')).toBe(true); expect(canProbeSource('work24')).toBe(true); expect(canProbeSource('jooble')).toBe(true); expect(canProbeSource('wanted')).toBe(false);
+    expect(canRefreshJob({ sourceUrl: 'https://www.wanted.co.kr/wd/123' })).toBe(true);
+    expect(canRefreshJob({ sourceUrl: 'https://job.alio.go.kr/recruitview.do?idx=305307' })).toBe(false);
+    expect(canProbeSource('saramin')).toBe(true); expect(canProbeSource('work24')).toBe(true); expect(canProbeSource('jooble')).toBe(true);
+    expect(canProbeSource('wanted')).toBe(true); expect(canProbeSource('jobalio')).toBe(true);
+    expect(canProbeSource('jumpit')).toBe(false); expect(canProbeSource('jobkorea')).toBe(false);
     const mock = vi.fn();
     vi.stubGlobal('fetch', mock);
-    await expect(refreshRemoteJob({ sourceUrl: 'https://www.wanted.co.kr/wd/123' })).rejects.toThrow('자동 조회를 지원하지 않아요');
     await expect(refreshRemoteJob({ sourceUrl: 'https://jumpit.saramin.co.kr/position/900002' })).rejects.toThrow('자동 조회를 지원하지 않아요');
     await expect(refreshRemoteJob({ sourceUrl: 'https://zighang.com/recruitment/12345678-1234-1234-1234-123456789abc' })).rejects.toThrow('자동 조회를 지원하지 않아요');
+    await expect(refreshRemoteJob({ id: 'jobalio-305307', sourceUrl: 'https://job.alio.go.kr/recruitview.do?idx=305307' })).rejects.toThrow('자동 조회를 지원하지 않아요');
     expect(mock).not.toHaveBeenCalled();
   });
   it('exposes working official site links for normal outbound navigation only', () => {
@@ -86,16 +95,17 @@ describe('browser-mode credential client', () => {
       { provider: 'saramin', configured: false },
       { provider: 'jooble', configured: false },
       { provider: 'wanted', configured: true },
+      { provider: 'jobalio', configured: false },
     ] }));
     vi.stubGlobal('fetch', mock);
     const status = await fetchCredentialStatus();
-    expect(status).toEqual({ available: true, providers: { work24: true, saramin: false, jooble: false } });
-    expect(JSON.stringify(status)).not.toMatch(/key/i);
+    expect(status).toEqual({ available: true, providers: { saramin: false, work24: true, jooble: false, wanted: true, jobalio: false } });
+    expect(JSON.stringify(status)).not.toMatch(/secret/i);
   });
 
   it('treats a missing credential endpoint (static/desktop server) as unavailable', async () => {
     vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify({ error: { code: 'NOT_FOUND' } }), { status: 404, headers: { 'Content-Type': 'application/json' } })));
-    expect(await fetchCredentialStatus()).toEqual({ available: false, providers: { work24: false, saramin: false, jooble: false } });
+    expect(await fetchCredentialStatus()).toEqual({ available: false, providers: { saramin: false, work24: false, jooble: false, wanted: false, jobalio: false } });
   });
 
   it('sends the key only in a bounded JSON PUT body and returns booleans', async () => {
@@ -103,15 +113,27 @@ describe('browser-mode credential client', () => {
       { provider: 'work24', configured: true },
       { provider: 'saramin', configured: false },
       { provider: 'jooble', configured: false },
+      { provider: 'wanted', configured: false },
+      { provider: 'jobalio', configured: false },
     ] }));
     vi.stubGlobal('fetch', mock);
     const result = await saveCredential('work24', 'test-only-key');
-    expect(result).toEqual({ work24: true, saramin: false, jooble: false });
+    expect(result).toEqual({ saramin: false, work24: true, jooble: false, wanted: false, jobalio: false });
     const [url, init] = mock.mock.calls[0] as unknown as [string, RequestInit];
     expect(url).toContain('/api/credentials/work24');
     expect(init.method).toBe('PUT');
     expect((init.headers as Record<string, string>)['Content-Type']).toBe('application/json');
     expect(init.body).toBe(JSON.stringify({ key: 'test-only-key' }));
+  });
+
+  it('sends the documented two Wanted fields together and never one at a time', async () => {
+    const mock = vi.fn(async () => Response.json({ providers: [
+      { provider: 'wanted', configured: true },
+    ] }));
+    vi.stubGlobal('fetch', mock);
+    await saveCredential('wanted', { clientId: 'id-value', clientSecret: 'secret-value' });
+    const [, init] = mock.mock.calls[0] as unknown as [string, RequestInit];
+    expect(init.body).toBe(JSON.stringify({ fields: { clientId: 'id-value', clientSecret: 'secret-value' } }));
   });
 
   it('surfaces a server error message without leaking anything else', async () => {

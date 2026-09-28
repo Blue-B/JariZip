@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { mkdtemp, readFile, rm, stat } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { createCredentialStore, CredentialError, MAX_KEY_LENGTH, PROVIDER_ENV, PROVIDERS, STORE_FILE, STORE_VERSION } from './credentials.mjs';
+import { createCredentialStore, CredentialError, MAX_KEY_LENGTH, normalizeFields, PROVIDER_ENV, PROVIDER_FIELDS, PROVIDERS, STORE_FILE, STORE_VERSION } from './credentials.mjs';
 
 // A reversible fake standing in for Electron's OS-keychain-backed safeStorage. It is
 // deliberately not encryption; the real DPAPI/keychain call is only reachable from the
@@ -26,11 +26,14 @@ async function withStore(run, { available = true, backend = 'basic_text' } = {})
 }
 
 test('only the officially approved providers are accepted', async () => {
-  assert.deepEqual([...PROVIDERS], ['work24', 'saramin', 'jooble']);
-  assert.deepEqual(PROVIDER_ENV, { work24: 'WORK24_AUTH_KEY', saramin: 'SARAMIN_ACCESS_KEY', jooble: 'JOOBLE_API_KEY' });
+  assert.deepEqual([...PROVIDERS], ['saramin', 'work24', 'jooble', 'wanted', 'jobalio']);
+  assert.deepEqual(PROVIDER_ENV.wanted, ['WANTED_CLIENT_ID', 'WANTED_CLIENT_SECRET']);
+  assert.deepEqual(PROVIDER_FIELDS.jobalio, [{ name: 'serviceKey', env: 'JOBALIO_SERVICE_KEY' }]);
+  assert.deepEqual(normalizeFields('wanted', { clientId: 'a', clientSecret: 'b' }), { clientId: 'a', clientSecret: 'b' });
+  assert.throws(() => normalizeFields('wanted', 'only-one'), error => error instanceof CredentialError && error.code === 'BAD_KEY');
   await withStore(store => {
     assert.equal(store.get('work24'), null);
-    for (const provider of ['wanted', 'jumpit', 'zighang', '', 'WORK24', null, 42, undefined]) {
+    for (const provider of ['jumpit', 'zighang', 'jobkorea', '', 'WORK24', null, 42, undefined]) {
       assert.throws(() => store.get(provider), error => error instanceof CredentialError && error.code === 'BAD_PROVIDER');
       assert.throws(() => store.set(provider, 'value'), error => error.code === 'BAD_PROVIDER');
       assert.throws(() => store.clear(provider), error => error.code === 'BAD_PROVIDER');
@@ -42,13 +45,26 @@ test('a stored key round-trips and its plaintext is never written to disk', asyn
   await withStore(async (store, directory) => {
     const secret = 'work24-test-key-0001';
     assert.equal(store.set('work24', secret), true);
-    assert.equal(store.get('work24'), secret);
+    assert.deepEqual(store.get('work24'), { authKey: secret });
     const body = await readFile(join(directory, STORE_FILE), 'utf8');
     assert.equal(body.includes(secret), false);
     const parsed = JSON.parse(body);
     assert.equal(parsed.version, STORE_VERSION);
-    assert.equal(typeof parsed.providers.work24, 'string');
-    assert.notEqual(parsed.providers.work24, secret);
+    assert.equal(typeof parsed.providers.work24.authKey, 'string');
+    assert.notEqual(parsed.providers.work24.authKey, secret);
+  });
+});
+
+test('Wanted stores both documented fields and is configured only when both are readable', async () => {
+  await withStore(async (store, directory) => {
+    store.set('wanted', { clientId: 'test-client-id', clientSecret: 'test-client-secret' });
+    assert.deepEqual(store.get('wanted'), { clientId: 'test-client-id', clientSecret: 'test-client-secret' });
+    assert.equal(store.configured('wanted'), true);
+    const body = await readFile(join(directory, STORE_FILE), 'utf8');
+    assert.equal(body.includes('test-client-secret'), false);
+    assert.equal(store.clear('wanted'), true);
+    assert.equal(store.get('wanted'), null);
+    assert.equal(store.configured('wanted'), false);
   });
 });
 
@@ -66,7 +82,7 @@ test('clearing removes only the requested provider and is idempotent', async () 
     store.set('saramin', 'saramin-test-key');
     assert.equal(store.clear('work24'), true);
     assert.equal(store.get('work24'), null);
-    assert.equal(store.get('saramin'), 'saramin-test-key');
+    assert.deepEqual(store.get('saramin'), { accessKey: 'saramin-test-key' });
     assert.equal(store.clear('work24'), false);
     const parsed = JSON.parse(await readFile(join(directory, STORE_FILE), 'utf8'));
     assert.deepEqual(Object.keys(parsed.providers), ['saramin']);
@@ -76,16 +92,24 @@ test('clearing removes only the requested provider and is idempotent', async () 
 test('status exposes booleans only, never a key', async () => {
   await withStore(store => {
     store.set('saramin', 'saramin-test-key');
+    store.set('wanted', { clientId: 'id', clientSecret: 'secret' });
     const status = store.providers();
-    assert.deepEqual(status, [{ provider: 'work24', configured: false }, { provider: 'saramin', configured: true }, { provider: 'jooble', configured: false }]);
+    assert.deepEqual(status, [
+      { provider: 'saramin', configured: true },
+      { provider: 'work24', configured: false },
+      { provider: 'jooble', configured: false },
+      { provider: 'wanted', configured: true },
+      { provider: 'jobalio', configured: false },
+    ]);
     assert.equal(JSON.stringify(status).includes('saramin-test-key'), false);
+    assert.equal(JSON.stringify(status).includes('secret'), false);
   });
 });
 
 test('keys are trimmed, and empty, oversized or control-character keys are rejected', async () => {
   await withStore(store => {
     assert.equal(store.set('work24', '  padded-key  '), true);
-    assert.equal(store.get('work24'), 'padded-key');
+    assert.deepEqual(store.get('work24'), { authKey: 'padded-key' });
     for (const bad of ['', '   ', null, undefined, 42, {}, []]) {
       assert.throws(() => store.set('work24', bad), error => error.code === 'BAD_KEY');
     }
@@ -109,12 +133,12 @@ test('unreadable or foreign credential files degrade to "not configured" without
     const file = join(directory, STORE_FILE);
     // A version bump from a future build must not be treated as valid ciphertext.
     const { writeFile } = await import('node:fs/promises');
-    await writeFile(file, JSON.stringify({ version: 999, providers: { work24: 'AAAA' } }));
+    await writeFile(file, JSON.stringify({ version: 999, providers: { work24: { authKey: 'AAAA' } } }));
     assert.equal(store.get('work24'), null);
     await writeFile(file, '{ not json');
     assert.equal(store.get('work24'), null);
     // Writing again repairs the file for the current version.
     store.set('work24', 'recovered-key');
-    assert.equal(store.get('work24'), 'recovered-key');
+    assert.deepEqual(store.get('work24'), { authKey: 'recovered-key' });
   });
 });

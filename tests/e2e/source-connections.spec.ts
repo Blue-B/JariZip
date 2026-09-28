@@ -2,7 +2,8 @@ import { test, expect } from '@playwright/test';
 
 const sources = [
   { id: 'saramin', name: '사람인', enabled: true, note: '공식 API 연결 설정됨' },
-  { id: 'wanted', name: '원티드', enabled: false, note: '제공사 사전 승인 없이 자동 수집하지 않아요' },
+  { id: 'wanted', name: '원티드', enabled: false, note: '원티드 공식 OpenAPI · WANTED_CLIENT_ID·WANTED_CLIENT_SECRET' },
+  { id: 'jobkorea', name: '잡코리아', enabled: false, note: '공식 API는 기관·서버 IP 승인 기반' },
 ];
 
 test('settings separate official-source configuration from a real query and never seed examples', async ({ page }) => {
@@ -19,10 +20,10 @@ test('settings separate official-source configuration from a real query and neve
   await page.goto('/#/app/settings', { waitUntil: 'networkidle' });
   await expect(page.getByRole('button', { name: '가상 예시로 다시 보기', exact: true })).toHaveCount(0);
   // Unapproved sources are never offered a live check or key input; only the manual path remains.
-  await expect(page.getByRole('button', { name: '원티드 공고 조회 확인', exact: true })).toHaveCount(0);
-  const wanted = page.locator('.connection-row').filter({ hasText: '원티드' });
-  await expect(wanted).toContainText('자동조회 미지원');
-  await expect(wanted).toContainText('공식 자동조회 API가 없어');
+  await expect(page.getByRole('button', { name: '잡코리아 공고 조회 확인', exact: true })).toHaveCount(0);
+  const jobkorea = page.locator('.connection-row').filter({ hasText: '잡코리아' });
+  await expect(jobkorea).toContainText('자동조회 미지원');
+  await expect(jobkorea).toContainText('기관·서버 IP 승인 기반');
   await expect(page.locator('.connection-footnote')).toContainText('고용24');
   expect(requests).toBe(0);
   await page.getByRole('button', { name: '사람인 공고 조회 확인', exact: true }).click();
@@ -65,7 +66,7 @@ test('missing API is recoverable and connection controls fit a narrow screen', a
   await expect(page.locator('.connection-error')).toContainText('정적 미리보기');
   available = true;
   await page.getByRole('button', { name: '서버 다시 확인', exact: true }).click();
-  await expect(page.locator('.connection-row')).toHaveCount(2);
+  await expect(page.locator('.connection-row')).toHaveCount(3);
   await expect(page.locator('.connection-error')).toHaveCount(0);
   await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
 });

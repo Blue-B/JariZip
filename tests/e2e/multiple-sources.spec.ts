@@ -69,7 +69,7 @@ test('selecting an unapproved source never issues a job request and shows the ma
   });
   await page.getByRole('button', { name: '공고 찾기', exact: true }).click();
   await expect(page.locator('.discover-optional')).toContainText('제공사의 사전 승인이 확인되지 않아');
-  await expect(page.locator('.discover-optional-list a')).toHaveCount(5);
+  await expect(page.locator('.discover-optional-list a')).toHaveCount(8);
   expect(log.filter(value => value === 'wanted')).toHaveLength(0);
   expect(log.length).toBe(before);
 });
@@ -92,14 +92,14 @@ test('a manually added unapproved posting opens saved with no re-query and keeps
   const dialog = page.getByRole('dialog');
   await dialog.locator('[name="company"]').fill('수동보관 가상기업');
   await dialog.locator('[name="title"]').fill('수동 확인 개발자');
-  await dialog.locator('[name="url"]').fill('https://www.wanted.co.kr/wd/900009');
+  await dialog.locator('[name="url"]').fill('https://jumpit.saramin.co.kr/position/900009');
   await dialog.locator('[name="description"]').fill('원문에서 직접 확인해 붙여넣은 시험용 공고 본문입니다. 자동 수집이 아닙니다.');
   await dialog.getByRole('button', { name: '공고 보관하기', exact: true }).click();
   await expect(page.locator('.save-status')).toHaveText('저장됨');
   await expect(page.locator('.job-list-card')).toHaveCount(1);
   await expect(page.locator('.job-detail')).toContainText('미확인');
   await expect(page.getByRole('button', { name: '출처 다시 조회', exact: true })).toHaveCount(0);
-  await expect(page.locator('.job-detail-actions').getByRole('link', { name: '원본 공고', exact: true })).toHaveAttribute('href', 'https://www.wanted.co.kr/wd/900009');
+  await expect(page.locator('.job-detail-actions').getByRole('link', { name: '원본 공고', exact: true })).toHaveAttribute('href', 'https://jumpit.saramin.co.kr/position/900009');
   expect(jobRequests).toBe(0);
 });
 

@@ -5,7 +5,7 @@
 // without importing Electron.
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
-import { normalizeKey, PROVIDER_ENV } from './credentials.mjs';
+import { normalizeFields, PROVIDER_FIELDS } from './credentials.mjs';
 import { isProvider } from './ipc.mjs';
 
 /**
@@ -49,13 +49,15 @@ export function resolveAppDirectory({ isPackaged, resourcesPath, root, exists = 
 /**
  * Copy stored credentials into process.env so the already-created job service sees them.
  * Decrypted values stay inside the main process; only the env variable named by each
- * provider adapter is set. Removing a key clears its variable.
+ * provider adapter is set. Removing a value clears its variable.
  */
 export function applyCredentialsToEnv(store, env = process.env) {
-  for (const [provider, variable] of Object.entries(PROVIDER_ENV)) {
-    const value = store.get(provider);
-    if (value) env[variable] = value;
-    else delete env[variable];
+  for (const [provider, fields] of Object.entries(PROVIDER_FIELDS)) {
+    const record = store.get(provider) || {};
+    for (const field of fields) {
+      if (record[field.name]) env[field.env] = record[field.name];
+      else delete env[field.env];
+    }
   }
   return env;
 }
@@ -68,21 +70,21 @@ export function isAllowedOrigin(url, serverUrl) {
 const badProvider = () => Object.assign(new Error('지원하지 않는 공고 출처예요.'), { code: 'BAD_PROVIDER' });
 
 /**
- * Store a provider key and mirror it into the given env object so the already-created job
- * service picks it up without a restart. Throws for unknown providers or invalid keys.
+ * Store a provider's configuration and mirror it into the given env object so the already-created
+ * job service picks it up without a restart. Throws for unknown providers or invalid values.
  */
-export function setProviderKey({ store, env = process.env }, provider, key) {
+export function setProviderKey({ store, env = process.env }, provider, values) {
   if (!isProvider(provider)) throw badProvider();
-  const value = normalizeKey(key);
-  store.set(provider, value);
-  env[PROVIDER_ENV[provider]] = value;
+  const record = normalizeFields(provider, values);
+  store.set(provider, record);
+  for (const field of PROVIDER_FIELDS[provider]) env[field.env] = record[field.name];
   return { provider, configured: true };
 }
 
-/** Remove a stored key and its env mirror. Returns whether ciphertext existed on disk. */
+/** Remove a stored configuration and its env mirror. Returns whether ciphertext existed on disk. */
 export function clearProviderKey({ store, env = process.env }, provider) {
   if (!isProvider(provider)) throw badProvider();
   const removed = store.clear(provider);
-  delete env[PROVIDER_ENV[provider]];
+  for (const field of PROVIDER_FIELDS[provider]) delete env[field.env];
   return { provider, configured: false, removed };
 }

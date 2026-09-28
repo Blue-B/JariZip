@@ -54,7 +54,8 @@ async function mockCredentials(page: Page, initial: { work24?: boolean; saramin?
   await page.route('**/api/sources', route => route.fulfill({ json: { sources: [
     { id: 'work24', name: '고용24', enabled: state.work24, note: state.work24 ? '고용24 공식 Open API 인증키 설정됨' : '고용24 공식 Open API · 키 필요' },
     { id: 'saramin', name: '사람인', enabled: state.saramin, note: '공식 API · 키 필요' },
-    { id: 'wanted', name: '원티드', enabled: false, note: '제공사 사전 승인 없음' },
+    { id: 'jumpit', name: '점핏', enabled: false, note: '제공사 사전 승인 없음' },
+    { id: 'jobkorea', name: '잡코리아', enabled: false, note: '공식 API는 기관·서버 IP 승인 기반' },
   ] } }));
   await page.route('**/api/jobs?**', route => {
     const url = new URL(route.request().url());
@@ -74,7 +75,7 @@ const clearDialog = (page: Page) => page.getByRole('dialog', { name: /키를 삭
 test('browser mode renders exactly one row per source with no duplicate key panel', async ({ page }) => {
   await mockCredentials(page);
   await page.goto('/#/app/settings', { waitUntil: 'networkidle' });
-  await expect(page.locator('.connection-row')).toHaveCount(3);
+  await expect(page.locator('.connection-row')).toHaveCount(4);
   await expect(page.getByTestId('browser-key-controls')).toHaveCount(2);
   // The old standalone key panel must be gone.
   await expect(page.getByTestId('browser-api-keys')).toHaveCount(0);
@@ -187,11 +188,12 @@ test('a failed live probe after a successful save is reported honestly', async (
 test('unapproved sources are clearly badged and never offer a key input', async ({ page }) => {
   await mockCredentials(page);
   await page.goto('/#/app/settings', { waitUntil: 'networkidle' });
-  const wanted = sourceRow(page, '원티드');
-  await expect(wanted.locator('.tag')).toContainText('자동조회 미지원');
-  await expect(wanted).toContainText('API 키가 필요 없는 출처라는 뜻이 아니에요');
-  await expect(wanted.getByTestId('browser-key-controls')).toHaveCount(0);
-  await expect(wanted.getByRole('button', { name: /키 설정|키 변경|키 삭제/ })).toHaveCount(0);
+  const jobkorea = sourceRow(page, '잡코리아');
+  await expect(jobkorea.locator('.tag')).toContainText('자동조회 미지원');
+  await expect(jobkorea).toContainText('API 키가 필요 없는 출처라는 뜻이 아니에요');
+  await expect(jobkorea).toContainText('기관·서버 IP');
+  await expect(jobkorea.getByTestId('browser-key-controls')).toHaveCount(0);
+  await expect(jobkorea.getByRole('button', { name: /키 설정|키 변경|키 삭제/ })).toHaveCount(0);
 });
 
 test('the browser key controls never appear when the desktop bridge is present', async ({ page }) => {
@@ -218,4 +220,58 @@ test('the unified source list fits a narrow screen without horizontal overflow',
   await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
   await sourceRow(page, '고용24').getByRole('button', { name: '키 설정', exact: true }).click();
   await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
+});
+
+test('Wanted renders both documented fields, saves them together, and JobKorea stays unavailable', async ({ page }) => {
+  const enabled = { wanted: false, jobalio: false };
+  const puts: Array<{ provider: string; body: unknown }> = [];
+  await page.route('**/api/credentials**', async route => {
+    const request = route.request();
+    const provider = new URL(request.url()).pathname.split('/').pop() ?? '';
+    if (request.method() === 'GET') return route.fulfill({ json: { providers: [
+      { provider: 'wanted', configured: enabled.wanted },
+      { provider: 'jobalio', configured: enabled.jobalio },
+    ] } });
+    puts.push({ provider, body: request.postDataJSON() });
+    if (provider === 'wanted') enabled.wanted = true;
+    if (provider === 'jobalio') enabled.jobalio = true;
+    return route.fulfill({ json: { provider, configured: true, providers: [
+      { provider: 'wanted', configured: enabled.wanted },
+      { provider: 'jobalio', configured: enabled.jobalio },
+    ] } });
+  });
+  await page.route('**/api/sources', route => route.fulfill({ json: { sources: [
+    { id: 'wanted', name: '원티드', enabled: enabled.wanted, note: '원티드 공식 OpenAPI · WANTED_CLIENT_ID·WANTED_CLIENT_SECRET' },
+    { id: 'jobalio', name: '잡알리오', enabled: enabled.jobalio, note: '잡알리오 공식 공공데이터포털 API · JOBALIO_SERVICE_KEY' },
+    { id: 'jobkorea', name: '잡코리아', enabled: false, note: '공식 API는 기관·서버 IP 승인 기반' },
+  ] } }));
+  await page.route('**/api/jobs?**', route => route.fulfill({ json: { jobs: [], nextPage: null, checkedAt: new Date().toISOString(), warnings: [], cached: false, sourceResults: [] } }));
+  await page.goto('/#/app/settings', { waitUntil: 'networkidle' });
+
+  const wanted = sourceRow(page, '원티드');
+  await wanted.getByRole('button', { name: '키 설정', exact: true }).click();
+  await expect(wanted.getByLabel('원티드 client-id', { exact: true })).toBeVisible();
+  await expect(wanted.getByLabel('원티드 client-secret', { exact: true })).toBeVisible();
+  await wanted.getByLabel('원티드 client-id', { exact: true }).fill('test-client-id');
+  await expect(wanted.getByRole('button', { name: '설정하고 조회 확인', exact: true })).toBeDisabled();
+  await wanted.getByLabel('원티드 client-secret', { exact: true }).fill('test-client-secret');
+  await wanted.getByRole('button', { name: '설정하고 조회 확인', exact: true }).click();
+  await expect(wanted).toContainText('설정됨');
+  expect(puts[0]).toEqual({ provider: 'wanted', body: { fields: { clientId: 'test-client-id', clientSecret: 'test-client-secret' } } });
+
+  const jobalio = sourceRow(page, '잡알리오');
+  await jobalio.getByRole('button', { name: '키 설정', exact: true }).click();
+  await jobalio.getByLabel('잡알리오 API 키', { exact: true }).fill('test-jobalio-service-key');
+  await jobalio.getByRole('button', { name: '설정하고 조회 확인', exact: true }).click();
+  await expect(jobalio).toContainText('설정됨');
+  expect(puts[1]).toEqual({ provider: 'jobalio', body: { key: 'test-jobalio-service-key' } });
+
+  const jobkorea = sourceRow(page, '잡코리아');
+  await expect(jobkorea.locator('.tag')).toContainText('자동조회 미지원');
+  await expect(jobkorea).toContainText('기관·서버 IP');
+  await expect(jobkorea.getByTestId('browser-key-controls')).toHaveCount(0);
+  // The typed values never reach browser storage.
+  const stored = await page.evaluate(() => ({ local: { ...localStorage }, session: { ...sessionStorage } }));
+  expect(JSON.stringify(stored)).not.toContain('test-client-secret');
+  expect(JSON.stringify(stored)).not.toContain('test-jobalio-service-key');
 });

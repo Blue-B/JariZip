@@ -15,11 +15,11 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-const noneConfigured = { work24: false, saramin: false, jooble: false };
+const noneConfigured = { saramin: false, work24: false, jooble: false, wanted: false, jobalio: false };
 
 describe('normalizeApiKeyStatus', () => {
   it('accepts the documented flat boolean status', () => {
-    expect(normalizeApiKeyStatus({ work24: true, saramin: false, jooble: true })).toEqual({ work24: true, saramin: false, jooble: true });
+    expect(normalizeApiKeyStatus({ saramin: false, work24: true, jooble: false, wanted: true, jobalio: false })).toEqual({ saramin: false, work24: true, jooble: false, wanted: true, jobalio: false });
   });
   it('accepts the shipped providers list without inventing results', () => {
     expect(normalizeApiKeyStatus({ providers: [
@@ -27,10 +27,12 @@ describe('normalizeApiKeyStatus', () => {
       { provider: 'work24', configured: false },
       { provider: 'jooble', configured: true },
       { provider: 'wanted', configured: true },
-    ], encryptionAvailable: true })).toEqual({ work24: false, saramin: true, jooble: true });
+      { provider: 'jobalio', configured: true },
+      { provider: 'jumpit', configured: true },
+    ], encryptionAvailable: true })).toEqual({ saramin: true, work24: false, jooble: true, wanted: true, jobalio: true });
   });
   it('rejects malformed or unknown payloads instead of guessing', () => {
-    for (const value of [null, undefined, 'work24', 7, {}, { providers: [] }, { providers: [{ provider: 'nope', configured: true }] }, { work24: 'yes', saramin: false, jooble: false }, { work24: true, saramin: false }]) {
+    for (const value of [null, undefined, 'work24', 7, {}, { providers: [] }, { providers: [{ provider: 'nope', configured: true }] }, { work24: 'yes', saramin: false, jooble: false, wanted: false, jobalio: false }, { work24: true, saramin: false }]) {
       expect(normalizeApiKeyStatus(value)).toBeNull();
     }
   });
@@ -59,18 +61,27 @@ describe('getDesktopBridge', () => {
     expect(await bridge!.getApiKeyStatus()).toEqual({ ...noneConfigured });
     expect(await bridge!.setApiKey('work24', 'secret-test-key')).toEqual({ ok: true });
     expect(setApiKey).toHaveBeenCalledWith('work24', 'secret-test-key');
+    // Wanted carries the documented two-field application configuration.
+    expect(await bridge!.setApiKey('wanted', { clientId: 'id-value', clientSecret: 'secret-value' })).toEqual({ ok: true });
+    expect(setApiKey).toHaveBeenCalledWith('wanted', { clientId: 'id-value', clientSecret: 'secret-value' });
   });
   it('normalizes the shipped getPlatform + providers status contract', async () => {
     desktop.jarizipDesktop = {
       getPlatform: async () => ({ platform: 'darwin', version: '9.9.9' }),
-      getApiKeyStatus: async () => ({ providers: [{ provider: 'work24', configured: true }, { provider: 'saramin', configured: false }, { provider: 'jooble', configured: false }], encryptionAvailable: true }),
+      getApiKeyStatus: async () => ({ providers: [
+        { provider: 'saramin', configured: false },
+        { provider: 'work24', configured: true },
+        { provider: 'jooble', configured: false },
+        { provider: 'wanted', configured: false },
+        { provider: 'jobalio', configured: true },
+      ], encryptionAvailable: true }),
       setApiKey: async () => ({ provider: 'work24', configured: true }),
       clearApiKey: async () => ({ provider: 'work24', configured: false }),
       openExternal: async () => ({ opened: true }),
     };
     const bridge = getDesktopBridge()!;
     expect(await bridge.getInfo()).toEqual({ platform: 'darwin', version: '9.9.9' });
-    expect(await bridge.getApiKeyStatus()).toEqual({ work24: true, saramin: false, jooble: false });
+    expect(await bridge.getApiKeyStatus()).toEqual({ saramin: false, work24: true, jooble: false, wanted: false, jobalio: true });
   });
   it('converts a rejected write into a plain failure result', async () => {
     desktop.jarizipDesktop = {
@@ -105,12 +116,14 @@ describe('first-run decision', () => {
     expect(shouldAutoOpenApiWizard({ ...noneConfigured, work24: true }, false)).toBe(false);
     expect(shouldAutoOpenApiWizard({ ...noneConfigured, saramin: true }, false)).toBe(false);
     expect(shouldAutoOpenApiWizard({ ...noneConfigured, jooble: true }, false)).toBe(false);
+    expect(shouldAutoOpenApiWizard({ ...noneConfigured, wanted: true }, false)).toBe(false);
+    expect(shouldAutoOpenApiWizard({ ...noneConfigured, jobalio: true }, false)).toBe(false);
   });
   it('reports connected providers in a stable order', () => {
     expect(connectedProviders(null)).toEqual([]);
     expect(connectedProviders({ ...noneConfigured, work24: true })).toEqual(['work24']);
-    expect(connectedProviders({ work24: true, saramin: true, jooble: true })).toEqual(['work24', 'saramin', 'jooble']);
-    expect(connectedProviders({ ...noneConfigured, jooble: true })).toEqual(['jooble']);
+    expect(connectedProviders({ saramin: true, work24: true, jooble: true, wanted: true, jobalio: true })).toEqual(['saramin', 'work24', 'jooble', 'wanted', 'jobalio']);
+    expect(connectedProviders({ ...noneConfigured, jobalio: true })).toEqual(['jobalio']);
   });
   it('reads and writes only the non-secret marker, never a key', () => {
     const store = new Map<string, string>();

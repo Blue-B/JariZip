@@ -35,21 +35,25 @@ test('the bridge maps every call onto a known channel and forwards validated val
   await bridge.getApiKeyStatus();
   await bridge.setApiKey('work24', 'key-value');
   await bridge.clearApiKey('saramin');
+  await bridge.setApiKey('wanted', { clientId: 'client-id-value', clientSecret: 'client-secret-value' });
   await bridge.openExternal('https://www.work24.go.kr/cm/e/a/0110/selectOpenApiIntro.do');
-  assert.deepEqual(seen.map(([channel]) => channel), [CHANNELS.platform, CHANNELS.getApiKeyStatus, CHANNELS.setApiKey, CHANNELS.clearApiKey, CHANNELS.openExternal]);
-  assert.deepEqual(seen[2][1], { provider: 'work24', key: 'key-value' });
+  assert.deepEqual(seen.map(([channel]) => channel), [CHANNELS.platform, CHANNELS.getApiKeyStatus, CHANNELS.setApiKey, CHANNELS.clearApiKey, CHANNELS.setApiKey, CHANNELS.openExternal]);
+  assert.deepEqual(seen[2][1], { provider: 'work24', fields: 'key-value' });
   assert.deepEqual(seen[3][1], { provider: 'saramin' });
-  assert.deepEqual(seen[4][1], { url: 'https://www.work24.go.kr/cm/e/a/0110/selectOpenApiIntro.do' });
+  assert.deepEqual(seen[4][1], { provider: 'wanted', fields: { clientId: 'client-id-value', clientSecret: 'client-secret-value' } });
+  assert.deepEqual(seen[5][1], { url: 'https://www.work24.go.kr/cm/e/a/0110/selectOpenApiIntro.do' });
 });
 
 test('the bridge refuses unknown providers and non-https URLs before any IPC call', async () => {
   let calls = 0;
   const bridge = createDesktopBridge(async () => { calls++; return { ok: true, value: null }; });
-  for (const provider of ['wanted', 'jumpit', 'zighang', 'WORK24', '', null, undefined, 7]) {
+  for (const provider of ['jumpit', 'zighang', 'jobkorea', 'WORK24', '', null, undefined, 7]) {
     await assert.rejects(bridge.setApiKey(provider, 'x'), /지원하지 않는/);
     await assert.rejects(bridge.clearApiKey(provider), /지원하지 않는/);
   }
   await assert.rejects(bridge.setApiKey('work24', 123), /문자열/);
+  await assert.rejects(bridge.setApiKey('wanted', { clientId: 1, clientSecret: 'x' }), /문자열/);
+  await assert.rejects(bridge.setApiKey('wanted', ['a', 'b']), /문자열/);
   for (const url of ['http://example.com/', 'javascript:alert(1)', 'file:///etc/passwd', 'data:text/html,x', 'https://user:pw@example.com/', 'not a url', '', null, undefined, 42]) {
     await assert.rejects(bridge.openExternal(url), /https/);
   }
@@ -67,21 +71,30 @@ test('main-process failures surface as plain errors without leaking the raw resu
   assert.equal(unwrapIpcResult({ ok: true, value: 1 }), 1);
 });
 
-test('status validation accepts exactly the three known providers and drops unknown fields', () => {
-  const good = validateStatus({ providers: [{ provider: 'work24', configured: false }, { provider: 'saramin', configured: true }, { provider: 'jooble', configured: true }], encryptionAvailable: true, secret: 'ignored' });
-  assert.deepEqual(good, { providers: [{ provider: 'work24', configured: false }, { provider: 'saramin', configured: true }, { provider: 'jooble', configured: true }], encryptionAvailable: true });
+test('status validation accepts exactly the five known providers and drops unknown fields', () => {
+  const providers = [
+    { provider: 'saramin', configured: false },
+    { provider: 'work24', configured: true },
+    { provider: 'jooble', configured: true },
+    { provider: 'wanted', configured: false },
+    { provider: 'jobalio', configured: true },
+  ];
+  const good = validateStatus({ providers, encryptionAvailable: true, secret: 'ignored' });
+  assert.deepEqual(good, { providers, encryptionAvailable: true });
   assert.equal(JSON.stringify(good).includes('secret'), false);
   for (const bad of [
     null, 'x', [],
-    { providers: [{ provider: 'wanted', configured: true }, { provider: 'saramin', configured: true }, { provider: 'jooble', configured: true }] },
-    { providers: [{ provider: 'work24', configured: 'yes' }, { provider: 'saramin', configured: true }, { provider: 'jooble', configured: false }] },
+    { providers: [{ provider: 'jumpit', configured: true }, ...providers.slice(1)] },
+    { providers: [{ provider: 'work24', configured: 'yes' }, ...providers.slice(1)] },
     { providers: [{ provider: 'work24', configured: true }] },
-    { providers: [{ provider: 'work24', configured: true }, { provider: 'work24', configured: true }, { provider: 'jooble', configured: true }] },
-    { providers: [{ provider: 'work24', configured: true }, { provider: 'saramin', key: 'leak' }, { provider: 'jooble', configured: false }] },
+    { providers: [{ provider: 'work24', configured: true }, { provider: 'work24', configured: true }, { provider: 'jooble', configured: true }, { provider: 'wanted', configured: false }, { provider: 'jobalio', configured: false }] },
+    { providers: [{ provider: 'work24', configured: true }, { provider: 'saramin', key: 'leak' }, { provider: 'jooble', configured: false }, { provider: 'wanted', configured: false }, { provider: 'jobalio', configured: false }] },
   ]) assert.throws(() => validateStatus(bad));
   assert.equal(isProvider('work24'), true);
-  assert.equal(isProvider('jooble'), true);
-  assert.equal(isProvider('wanted'), false);
+  assert.equal(isProvider('jobalio'), true);
+  assert.equal(isProvider('wanted'), true);
+  assert.equal(isProvider('jumpit'), false);
+  assert.equal(isProvider('jobkorea'), false);
 });
 
 test('URL validation only allows https URLs without embedded credentials', () => {
@@ -115,12 +128,16 @@ test('assets resolve to resources/dist when packaged and <root>/dist otherwise',
 });
 
 test('credentials are mirrored into process.env and removed again on clear', () => {
-  const fakeStore = { get: provider => provider === 'work24' ? 'work24-test-key' : null };
+  const fakeStore = { get: provider => provider === 'work24' ? { authKey: 'work24-test-key' } : null };
   const env = {};
   applyCredentialsToEnv(fakeStore, env);
   assert.deepEqual(env, { WORK24_AUTH_KEY: 'work24-test-key' });
   applyCredentialsToEnv({ get: () => null }, env);
   assert.deepEqual(env, {});
+  // Wanted mirrors both documented variables at once.
+  const wantedEnv = {};
+  applyCredentialsToEnv({ get: provider => provider === 'wanted' ? { clientId: 'id', clientSecret: 'secret' } : null }, wantedEnv);
+  assert.deepEqual(wantedEnv, { WANTED_CLIENT_ID: 'id', WANTED_CLIENT_SECRET: 'secret' });
 });
 
 test('setting and clearing a key updates both the store and the live process environment', () => {
@@ -135,20 +152,24 @@ test('setting and clearing a key updates both the store and the live process env
 
   assert.deepEqual(setProviderKey(context, 'work24', '  work24-test-key  '), { provider: 'work24', configured: true });
   assert.deepEqual(env, { UNRELATED: 'keep', WORK24_AUTH_KEY: 'work24-test-key' });
-  assert.deepEqual(setProviderKey(context, 'saramin', 'saramin-test-key'), { provider: 'saramin', configured: true });
-  assert.equal(env.SARAMIN_ACCESS_KEY, 'saramin-test-key');
+  assert.deepEqual(setProviderKey(context, 'wanted', { clientId: 'wanted-client-id', clientSecret: 'wanted-client-secret' }), { provider: 'wanted', configured: true });
+  assert.equal(env.WANTED_CLIENT_ID, 'wanted-client-id');
+  assert.equal(env.WANTED_CLIENT_SECRET, 'wanted-client-secret');
 
   assert.deepEqual(clearProviderKey(context, 'work24'), { provider: 'work24', configured: false, removed: true });
   assert.equal('WORK24_AUTH_KEY' in env, false);
-  assert.equal(env.SARAMIN_ACCESS_KEY, 'saramin-test-key');
+  assert.equal(env.WANTED_CLIENT_ID, 'wanted-client-id');
   assert.deepEqual(clearProviderKey(context, 'work24'), { provider: 'work24', configured: false, removed: false });
+  assert.deepEqual(clearProviderKey(context, 'wanted'), { provider: 'wanted', configured: false, removed: true });
+  assert.equal('WANTED_CLIENT_SECRET' in env, false);
 
   // A rejected key must never reach the store or the environment.
   assert.throws(() => setProviderKey(context, 'saramin', ''), error => error.code === 'BAD_KEY');
-  assert.throws(() => setProviderKey(context, 'wanted', 'x'), error => error.code === 'BAD_PROVIDER');
-  assert.throws(() => clearProviderKey(context, 'jumpit'), error => error.code === 'BAD_PROVIDER');
-  assert.equal(env.SARAMIN_ACCESS_KEY, 'saramin-test-key');
-  assert.deepEqual(writes.map(([action]) => action), ['set', 'set', 'clear', 'clear']);
+  assert.throws(() => setProviderKey(context, 'wanted', 'only-one'), error => error.code === 'BAD_KEY');
+  assert.throws(() => setProviderKey(context, 'jumpit', 'x'), error => error.code === 'BAD_PROVIDER');
+  assert.throws(() => clearProviderKey(context, 'jobkorea'), error => error.code === 'BAD_PROVIDER');
+  assert.equal(env.WANTED_CLIENT_ID, undefined);
+  assert.equal(env.UNRELATED, 'keep');
 });
 
 test('only the loopback origin the window loaded is allowed to navigate', () => {

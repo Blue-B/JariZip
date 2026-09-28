@@ -9,15 +9,16 @@
  * API keys are never handled here: they only live in memory while the user
  * pastes them, and the shell stores them. Nothing in this module reads or
  * writes a key, and the one persisted marker is a non-secret boolean.
+ *
+ * A provider may need one field (Saramin, Work24, Jooble, JOB-ALIO) or several
+ * (Wanted OpenAPI needs a client-id and a client-secret). The bridge accepts
+ * either a single string or a `{ field: value }` map and forwards it verbatim.
  */
 
-export type ApiProvider = 'work24' | 'saramin' | 'jooble';
+export type ApiProvider = 'saramin' | 'work24' | 'jooble' | 'wanted' | 'jobalio';
+export type ApiFieldValues = Record<string, string>;
 
-export interface ApiKeyStatus {
-  work24: boolean;
-  saramin: boolean;
-  jooble: boolean;
-}
+export type ApiKeyStatus = Record<ApiProvider, boolean>;
 
 export interface ApiKeyWriteResult {
   ok: boolean;
@@ -29,7 +30,7 @@ export interface DesktopInfo {
   version: string;
 }
 
-const PROVIDERS: ApiProvider[] = ['work24', 'saramin', 'jooble'];
+export const PROVIDERS: ApiProvider[] = ['saramin', 'work24', 'jooble', 'wanted', 'jobalio'];
 
 /**
  * The documented renderer contract. `getInfo` is the documented name; the
@@ -39,7 +40,7 @@ interface RawBridge {
   getInfo?: () => Promise<unknown>;
   getPlatform?: () => Promise<unknown>;
   getApiKeyStatus: () => Promise<unknown>;
-  setApiKey: (provider: ApiProvider, key: string) => Promise<unknown>;
+  setApiKey: (provider: ApiProvider, values: string | ApiFieldValues) => Promise<unknown>;
   clearApiKey: (provider: ApiProvider) => Promise<unknown>;
   openExternal: (url: string) => Promise<unknown>;
 }
@@ -48,7 +49,7 @@ interface RawBridge {
 export interface JarizipDesktopBridge {
   getInfo(): Promise<DesktopInfo>;
   getApiKeyStatus(): Promise<ApiKeyStatus>;
-  setApiKey(provider: ApiProvider, key: string): Promise<ApiKeyWriteResult>;
+  setApiKey(provider: ApiProvider, values: string | ApiFieldValues): Promise<ApiKeyWriteResult>;
   clearApiKey(provider: ApiProvider): Promise<ApiKeyWriteResult>;
   openExternal(url: string): Promise<void>;
 }
@@ -60,15 +61,16 @@ declare global {
   }
 }
 
-/** Accepts either `{ work24, saramin }` booleans or the shipped `{ providers: [...] }` list. */
+/** Accepts either a flat boolean status or the shipped `{ providers: [...] }` list. */
 export function normalizeApiKeyStatus(raw: unknown): ApiKeyStatus | null {
   if (!raw || typeof raw !== 'object') return null;
   const value = raw as Record<string, unknown>;
-  if (typeof value.work24 === 'boolean' && typeof value.saramin === 'boolean' && typeof value.jooble === 'boolean') {
-    return { work24: value.work24, saramin: value.saramin, jooble: value.jooble };
+  const empty = () => Object.fromEntries(PROVIDERS.map(provider => [provider, false])) as ApiKeyStatus;
+  if (PROVIDERS.every(provider => typeof value[provider] === 'boolean')) {
+    return Object.fromEntries(PROVIDERS.map(provider => [provider, value[provider]])) as ApiKeyStatus;
   }
   if (Array.isArray(value.providers)) {
-    const status: ApiKeyStatus = { work24: false, saramin: false, jooble: false };
+    const status = empty();
     let known = false;
     for (const entry of value.providers) {
       if (!entry || typeof entry !== 'object') continue;
@@ -126,9 +128,9 @@ export function getDesktopBridge(): JarizipDesktopBridge | null {
       if (!status) throw new Error('API 키 상태를 읽을 수 없어요.');
       return status;
     },
-    async setApiKey(provider, key): Promise<ApiKeyWriteResult> {
+    async setApiKey(provider, values): Promise<ApiKeyWriteResult> {
       try {
-        return toWriteResult(await bridge.setApiKey.call(bridge, provider, key));
+        return toWriteResult(await bridge.setApiKey.call(bridge, provider, values));
       } catch (error) {
         return { ok: false, message: error instanceof Error ? error.message : undefined };
       }
@@ -167,7 +169,7 @@ export function markApiSetupWizardSeen(): void {
 
 /**
  * The wizard auto-opens only for a genuine first run: the callers already know
- * the bridge exists, the key status is known, neither approved source is
+ * the bridge exists, the key status is known, no approved source is
  * connected, and the user has not skipped/closed it before.
  */
 export function shouldAutoOpenApiWizard(status: ApiKeyStatus | null, seen: boolean): boolean {

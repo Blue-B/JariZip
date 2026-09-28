@@ -22,12 +22,16 @@ test('normalization never invents a posting date, salary or contract', () => {
   assert.equal(job.publishedAt, ''); assert.equal(job.salary, '미기재'); assert.equal(job.employment, '미기재');
   assert.equal(job.verification, 'source'); assert.equal(job.isDemo, false); assert.equal(job.sourceUrl, 'https://www.wanted.co.kr/wd/101');
 });
-test('the shipped source configuration disables unapproved sources and states why', () => {
+test('the shipped source configuration disables unconfigured and unapproved sources and states why', () => {
   const service = createJobService({ env: {}, fetcher: async () => { throw new Error('must not fetch'); } });
   const byId = Object.fromEntries(service.sources().map(source => [source.id, source]));
-  assert.equal(byId.wanted.enabled, false); assert.equal(byId.jumpit.enabled, false); assert.equal(byId.zighang.enabled, false);
-  assert.match(byId.wanted.note, /승인/); assert.match(byId.jumpit.note, /승인/); assert.match(byId.zighang.note, /승인/);
+  for (const id of ['wanted', 'jumpit', 'zighang', 'jobkorea']) assert.equal(byId[id].enabled, false, id);
+  assert.match(byId.jumpit.note, /승인/); assert.match(byId.zighang.note, /승인/);
+  assert.match(byId.jobkorea.note, /기관.*서버 IP|서버 IP|승인/);
   assert.equal(byId.saramin.enabled, false); assert.match(byId.saramin.note, /SARAMIN_ACCESS_KEY/);
+  assert.equal(byId.wanted.enabled, false); assert.match(byId.wanted.note, /WANTED_CLIENT_ID/);
+  assert.match(byId.wanted.note, /WANTED_CLIENT_SECRET/);
+  assert.equal(byId.jobalio.enabled, false); assert.match(byId.jobalio.note, /JOBALIO_SERVICE_KEY/);
   const configured = createJobService({ env: keyEnv, fetcher: async () => { throw new Error('must not fetch'); } });
   assert.equal(configured.sources().find(source => source.id === 'saramin').enabled, true);
 });
@@ -71,7 +75,7 @@ test('invalid parameters, missing keys and unapproved providers do not call an u
 });
 test('unapproved source names are rejected before any network access', async () => {
   let calls = 0; const service = createJobService({ env: keyEnv, fetcher: async () => { calls++; throw new Error('must not fetch'); } });
-  for (const provider of ['wanted', 'jumpit', 'zighang']) {
+  for (const provider of ['jumpit', 'zighang', 'jobkorea']) {
     await assert.rejects(service.search({ provider }), error => error.code === 'SOURCE_NOT_PERMITTED' && error.status === 403);
     await assert.rejects(service.detail(provider, '101'), error => error.code === 'SOURCE_NOT_PERMITTED');
   }
@@ -80,7 +84,7 @@ test('unapproved source names are rejected before any network access', async () 
 });
 test('refresh and check entry points cannot bypass the block', async () => {
   let calls = 0; const service = createJobService({ env: keyEnv, fetcher: async () => { calls++; throw new Error('must not fetch'); } });
-  for (const provider of ['wanted', 'jumpit', 'zighang']) {
+  for (const provider of ['jumpit', 'zighang', 'jobkorea']) {
     await assert.rejects(service.search({ provider, refresh: true }), error => error.code === 'SOURCE_NOT_PERMITTED');
     await assert.rejects(service.search({ provider, cursor: 'start' }), error => error.code === 'SOURCE_NOT_PERMITTED');
     await assert.rejects(service.detail(provider, '101', true), error => error.code === 'SOURCE_NOT_PERMITTED');
@@ -89,7 +93,7 @@ test('refresh and check entry points cannot bypass the block', async () => {
   const server = createAppServer({ service }); server.listen(0, '127.0.0.1'); await once(server, 'listening');
   const base = `http://127.0.0.1:${server.address().port}`;
   try {
-    for (const path of ['/api/jobs?source=wanted&refresh=1', '/api/jobs?source=jumpit&cursor=start', '/api/jobs/zighang/11111111-2222-3333-4444-555555555555?refresh=1']) {
+    for (const path of ['/api/jobs?source=jumpit&refresh=1', '/api/jobs?source=zighang&cursor=start', '/api/jobs/jobkorea/11111111-2222-3333-4444-555555555555?refresh=1']) {
       const response = await fetch(`${base}${path}`); assert.equal(response.status, 403); assert.equal((await response.json()).error.code, 'SOURCE_NOT_PERMITTED');
     }
   } finally { server.closeAllConnections(); await new Promise(resolve => server.close(resolve)); }
@@ -109,9 +113,9 @@ test('HTTP API rejects cross-site calls, writes, unknown proxy routes and unappr
   try {
     const result = await fetch(`${base}/api/jobs?source=saramin`); assert.equal(result.status, 200); assert.equal((await result.json()).jobs.length, 1);
     assert.equal((await fetch(`${base}/api/jobs`)).status, 200, 'default aggregate returns an empty approved-source result');
-    assert.equal((await fetch(`${base}/api/jobs?source=wanted`)).status, 403);
+    assert.equal((await fetch(`${base}/api/jobs?source=wanted`)).status, 503, 'Wanted is approved but needs both documented fields');
     const blocked = await (await fetch(`${base}/api/jobs?source=jumpit`)).json(); assert.equal(blocked.error.code, 'SOURCE_NOT_PERMITTED');
-    assert.equal((await fetch(`${base}/api/jobs/wanted/101`)).status, 403);
+    assert.equal((await fetch(`${base}/api/jobs/jobkorea/101`)).status, 403);
     assert.equal((await fetch(`${base}/api/jobs`, { headers: { Origin: 'https://untrusted.invalid' } })).status, 403);
     assert.equal((await fetch(`${base}/api/jobs`, { method: 'POST' })).status, 405);
     assert.equal((await fetch(`${base}/api/proxy?url=http://localhost`)).status, 404);

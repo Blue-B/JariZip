@@ -40,7 +40,7 @@ test('the settings screen offers the official 고용24 source and its original s
   await page.route('**/api/sources', route => route.fulfill({ json: { sources } }));
   await page.goto('/#/app/settings');
   const row = page.locator('.connection-row').filter({ hasText: '고용24' });
-  await expect(row).toContainText('공식 Open API');
+  await expect(row).toContainText('공식 API · WORK24_AUTH_KEY');
   await expect(row.getByRole('link', { name: '고용24 원문 사이트 열기', exact: true })).toHaveAttribute('href', 'https://www.work24.go.kr/');
   await expect(page.locator('.connection-footnote')).toContainText('WORK24_AUTH_KEY');
   await expect(page.locator('.connection-footnote')).toContainText('원문 링크와 출처 표시');

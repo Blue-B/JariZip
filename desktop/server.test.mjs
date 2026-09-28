@@ -95,7 +95,7 @@ test('the already-created job service sees a key set through the desktop shell w
         const payload = await (await fetch(`${started.url}api/sources`)).json();
         return Object.fromEntries(payload.sources.map(source => [source.id, source.enabled]));
       };
-      assert.deepEqual(await status(), { saramin: false, work24: false, jooble: false, wanted: false, jumpit: false, zighang: false });
+      assert.deepEqual(await status(), { saramin: false, work24: false, jooble: false, wanted: false, jobalio: false, jumpit: false, zighang: false, jobkorea: false });
 
       // Exactly what the IPC setApiKey handler does: encrypt via the store, then mirror to env.
       const store = { set: () => true, clear: () => true };

@@ -91,11 +91,16 @@ export function createDesktopBridge(invoke) {
     getPlatform: () => call(CHANNELS.platform),
     /** { providers: [{ provider, configured }], encryptionAvailable } — booleans only. */
     getApiKeyStatus: () => call(CHANNELS.getApiKeyStatus),
-    /** Encrypt and persist a provider key, then mirror it into process.env. */
-    setApiKey: (provider, key) => {
+    /** Encrypt and persist a provider's configuration, then mirror it into process.env. */
+    setApiKey: (provider, values) => {
       if (!isProvider(provider)) return Promise.reject(new Error('지원하지 않는 공고 출처예요.'));
-      if (typeof key !== 'string') return Promise.reject(new Error('API 키는 문자열이어야 해요.'));
-      return call(CHANNELS.setApiKey, { provider, key });
+      const fields = values;
+      if (typeof fields !== 'string') {
+        if (!fields || typeof fields !== 'object' || Array.isArray(fields) || Object.values(fields).some(value => typeof value !== 'string')) {
+          return Promise.reject(new Error('API 설정값은 문자열이어야 해요.'));
+        }
+      }
+      return call(CHANNELS.setApiKey, { provider, fields });
     },
     /** Remove a stored key and its process.env mirror. */
     clearApiKey: provider => {

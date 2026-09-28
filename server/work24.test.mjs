@@ -148,7 +148,7 @@ test('missing Work24 key, unapproved sources and malformed XML never reach the n
   const service = createJobService({ env: {}, fetcher: async () => { calls++; throw new Error('must not run'); } });
   await assert.rejects(service.search({ provider: 'work24' }), error => error.code === 'KEY_REQUIRED');
   await assert.rejects(service.detail('work24', 'KJAS002609110001'), error => error.code === 'KEY_REQUIRED');
-  for (const provider of ['wanted', 'jumpit', 'zighang']) await assert.rejects(service.search({ provider }), error => error.code === 'SOURCE_NOT_PERMITTED');
+  for (const provider of ['jumpit', 'zighang', 'jobkorea']) await assert.rejects(service.search({ provider }), error => error.code === 'SOURCE_NOT_PERMITTED');
   assert.equal(calls, 0);
   const bad = createJobService({ env: keyEnv, fetcher: async () => xmlResponse('<wantedRoot><wanted><title>only</title></wanted></wantedRoot>') });
   await assert.rejects(bad.search({ provider: 'work24' }), error => error.code === 'SOURCE_FORMAT');
@@ -171,7 +171,7 @@ test('the aggregate HTTP path exposes both approved sources and forwards the Wor
   try {
     const info = await (await fetch(`${base}/api/sources`)).json();
     const ids = info.sources.map(source => source.id);
-    assert.deepEqual(ids, ['saramin', 'work24', 'jooble', 'wanted', 'jumpit', 'zighang']);
+    assert.deepEqual(ids, ['saramin', 'work24', 'jooble', 'wanted', 'jobalio', 'jumpit', 'zighang', 'jobkorea']);
     assert.equal(info.sources.find(source => source.id === 'work24').enabled, true);
     const result = await fetch(`${base}/api/jobs?source=work24`);
     assert.equal(result.status, 200); assert.equal((await result.json()).jobs.length, 1);
@@ -179,7 +179,7 @@ test('the aggregate HTTP path exposes both approved sources and forwards the Wor
     assert.equal(detailResponse.status, 200); assert.equal((await detailResponse.json()).job.id, 'work24-KJAS002609110001');
     assert.notEqual((await fetch(`${base}/api/jobs/work24/..%2Fprivate`)).status, 200);
     assert.equal((await fetch(`${base}/api/jobs/work24/---`)).status, 400);
-    assert.equal((await fetch(`${base}/api/jobs?source=wanted`)).status, 403);
+    assert.equal((await fetch(`${base}/api/jobs?source=jobkorea`)).status, 403);
   } finally { server.closeAllConnections(); await new Promise(resolve => server.close(resolve)); }
 });
 
