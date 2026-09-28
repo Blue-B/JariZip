@@ -11,11 +11,12 @@
  * writes a key, and the one persisted marker is a non-secret boolean.
  */
 
-export type ApiProvider = 'work24' | 'saramin';
+export type ApiProvider = 'work24' | 'saramin' | 'jooble';
 
 export interface ApiKeyStatus {
   work24: boolean;
   saramin: boolean;
+  jooble: boolean;
 }
 
 export interface ApiKeyWriteResult {
@@ -28,7 +29,7 @@ export interface DesktopInfo {
   version: string;
 }
 
-const PROVIDERS: ApiProvider[] = ['work24', 'saramin'];
+const PROVIDERS: ApiProvider[] = ['work24', 'saramin', 'jooble'];
 
 /**
  * The documented renderer contract. `getInfo` is the documented name; the
@@ -63,11 +64,11 @@ declare global {
 export function normalizeApiKeyStatus(raw: unknown): ApiKeyStatus | null {
   if (!raw || typeof raw !== 'object') return null;
   const value = raw as Record<string, unknown>;
-  if (typeof value.work24 === 'boolean' && typeof value.saramin === 'boolean') {
-    return { work24: value.work24, saramin: value.saramin };
+  if (typeof value.work24 === 'boolean' && typeof value.saramin === 'boolean' && typeof value.jooble === 'boolean') {
+    return { work24: value.work24, saramin: value.saramin, jooble: value.jooble };
   }
   if (Array.isArray(value.providers)) {
-    const status: ApiKeyStatus = { work24: false, saramin: false };
+    const status: ApiKeyStatus = { work24: false, saramin: false, jooble: false };
     let known = false;
     for (const entry of value.providers) {
       if (!entry || typeof entry !== 'object') continue;
@@ -171,7 +172,7 @@ export function markApiSetupWizardSeen(): void {
  */
 export function shouldAutoOpenApiWizard(status: ApiKeyStatus | null, seen: boolean): boolean {
   if (!status) return false;
-  return !status.work24 && !status.saramin && !seen;
+  return PROVIDERS.every(provider => !status[provider]) && !seen;
 }
 
 /** Connected providers in a stable, human-meaningful order. */

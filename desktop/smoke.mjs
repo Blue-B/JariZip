@@ -64,7 +64,7 @@ async function main() {
   if (!report.platform || report.platform.platform !== process.platform) problems.push('platform payload is missing or wrong');
   if (typeof report.encryptionAvailable !== 'boolean') problems.push('encryption availability was not reported');
   const seen = values => values?.map(entry => entry.provider).join(',');
-  if (seen(report.before?.providers) !== 'work24,saramin') problems.push('credential status does not cover both providers');
+  if (seen(report.before?.providers) !== 'work24,saramin,jooble') problems.push('credential status does not cover all providers');
   if (typeof report.before?.providers?.[0]?.configured !== 'boolean') problems.push('credential status is not boolean-only');
   if (report.encryptionAvailable) {
     if (report.setError) problems.push(`setApiKey failed with a synthetic key: ${report.setError}`);

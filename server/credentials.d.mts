@@ -1,4 +1,4 @@
-export type CredentialProvider = 'work24' | 'saramin';
+export type CredentialProvider = 'work24' | 'saramin' | 'jooble';
 export interface ProviderStatus { provider: CredentialProvider; configured: boolean }
 export class CredentialError extends Error {
   code: string;

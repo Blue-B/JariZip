@@ -118,7 +118,7 @@ async function runSmokeTest(window, store, env) {
     };
   })()`);
   // The synthetic key must exist nowhere: not in the store, not in the environment, not in stdout.
-  const envVariables = ['WORK24_AUTH_KEY', 'SARAMIN_ACCESS_KEY'];
+  const envVariables = ['WORK24_AUTH_KEY', 'SARAMIN_ACCESS_KEY', 'JOOBLE_API_KEY'];
   const leakedEnv = envVariables.filter(name => String(env[name] ?? '').includes('smoke-test-key'));
   const stillStored = store.get('work24') !== null;
   const { status, ...reportable } = result;

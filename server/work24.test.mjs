@@ -171,7 +171,7 @@ test('the aggregate HTTP path exposes both approved sources and forwards the Wor
   try {
     const info = await (await fetch(`${base}/api/sources`)).json();
     const ids = info.sources.map(source => source.id);
-    assert.deepEqual(ids, ['saramin', 'work24', 'wanted', 'jumpit', 'zighang']);
+    assert.deepEqual(ids, ['saramin', 'work24', 'jooble', 'wanted', 'jumpit', 'zighang']);
     assert.equal(info.sources.find(source => source.id === 'work24').enabled, true);
     const result = await fetch(`${base}/api/jobs?source=work24`);
     assert.equal(result.status, 200); assert.equal((await result.json()).jobs.length, 1);

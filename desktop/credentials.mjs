@@ -24,7 +24,7 @@ export class CredentialError extends Error {
 
 export function normalizeProvider(value) {
   if (typeof value !== 'string' || !PROVIDERS.includes(value)) {
-    throw new CredentialError('BAD_PROVIDER', 'API 키는 고용24(work24)와 사람인(saramin)에만 설정할 수 있어요.');
+    throw new CredentialError('BAD_PROVIDER', 'API 키는 고용24(work24)·사람인(saramin)·조블(jooble)에만 설정할 수 있어요.');
   }
   return value;
 }

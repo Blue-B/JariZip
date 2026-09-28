@@ -69,7 +69,7 @@ test('a key saved to a temp dir persists, updates the live env, and clears again
   await withTemp(async directory => {
     const env = {};
     const credentials = createEnvCredentialStore({ file: join(directory, ENV_FILE), env, logger: { warn() {} } });
-    assert.deepEqual(credentials.providers(), [{ provider: 'work24', configured: false }, { provider: 'saramin', configured: false }]);
+    assert.deepEqual(credentials.providers(), [{ provider: 'work24', configured: false }, { provider: 'saramin', configured: false }, { provider: 'jooble', configured: false }]);
 
     credentials.set('work24', WORK24_KEY);
     // Written to disk and to the exact env object the job service reads.
@@ -110,7 +110,7 @@ test('credential writes are atomic and restrictive on POSIX', { skip: process.pl
   });
 });
 
-test('only work24 and saramin are accepted and bad providers, keys or bodies are refused', async () => {
+test('only work24, saramin and jooble are accepted and bad providers, keys or bodies are refused', async () => {
   await withTemp(async directory => {
     const { base, close } = await start(directory);
     try {
@@ -150,7 +150,7 @@ test('responses never contain the secret value', async () => {
       const saved = await put(base, 'work24', WORK24_KEY);
       const savedText = await saved.text();
       assert.doesNotMatch(savedText, new RegExp(WORK24_KEY));
-      assert.deepEqual(JSON.parse(savedText).providers, [{ provider: 'work24', configured: true }, { provider: 'saramin', configured: false }]);
+      assert.deepEqual(JSON.parse(savedText).providers, [{ provider: 'work24', configured: true }, { provider: 'saramin', configured: false }, { provider: 'jooble', configured: false }]);
       const listed = await (await status(base)).text();
       assert.doesNotMatch(listed, new RegExp(WORK24_KEY));
       const cleared = await (await del(base, 'work24')).text();

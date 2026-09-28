@@ -18,6 +18,12 @@ describe('multiple source identity', () => {
   it('rejects credentials, forged hosts, unexpected ports and invalid source IDs', () => {
     for (const sourceUrl of ['http://jumpit.saramin.co.kr/position/123', 'https://jumpit.saramin.co.kr.evil.example/position/123', 'https://user:secret@jumpit.saramin.co.kr/position/123', 'https://jumpit.saramin.co.kr:8443/position/123', 'https://jumpit.saramin.co.kr/position/not-an-id', 'https://zighang.com/recruitment/../../private', 'https://www.work24.go.kr/wk/a/b/1500/empDetailAuthView.do?wantedAuthNo=has%20space', 'https://work24.go.kr.evil.example/wk/a/b/1500/empDetailAuthView.do?wantedAuthNo=KJAS1']) expect(sourceIdentity({ sourceUrl })).toBeNull();
   });
+  it('never treats a Jooble result as refreshable through its outbound link', () => {
+    // A Jooble `link` can point at any third-party site, including another approved provider.
+    expect(sourceIdentity({ id: 'jooble-123', sourceUrl: 'https://www.saramin.co.kr/zf_user/jobs/relay/view?rec_idx=789' })).toBeNull();
+    expect(canRefreshJob({ id: 'jooble-123', sourceUrl: 'https://www.saramin.co.kr/zf_user/jobs/relay/view?rec_idx=789' })).toBe(false);
+    expect(canProbeSource('jooble')).toBe(true);
+  });
 });
 
 describe('unapproved source runtime block', () => {
@@ -33,7 +39,7 @@ describe('unapproved source runtime block', () => {
   it('reports which saved postings may be re-queried and blocks the rest before network', async () => {
     expect(canRefreshJob({ sourceUrl: 'https://www.saramin.co.kr/zf_user/jobs/relay/view?rec_idx=789' })).toBe(true);
     expect(canRefreshJob({ sourceUrl: 'https://www.work24.go.kr/wk/a/b/1500/empDetailAuthView.do?wantedAuthNo=KJAS002609110001' })).toBe(true);
-    expect(canProbeSource('saramin')).toBe(true); expect(canProbeSource('work24')).toBe(true); expect(canProbeSource('wanted')).toBe(false);
+    expect(canProbeSource('saramin')).toBe(true); expect(canProbeSource('work24')).toBe(true); expect(canProbeSource('jooble')).toBe(true); expect(canProbeSource('wanted')).toBe(false);
     const mock = vi.fn();
     vi.stubGlobal('fetch', mock);
     await expect(refreshRemoteJob({ sourceUrl: 'https://www.wanted.co.kr/wd/123' })).rejects.toThrow('자동 조회를 지원하지 않아요');
@@ -78,27 +84,29 @@ describe('browser-mode credential client', () => {
     const mock = vi.fn(async () => Response.json({ providers: [
       { provider: 'work24', configured: true },
       { provider: 'saramin', configured: false },
+      { provider: 'jooble', configured: false },
       { provider: 'wanted', configured: true },
     ] }));
     vi.stubGlobal('fetch', mock);
     const status = await fetchCredentialStatus();
-    expect(status).toEqual({ available: true, providers: { work24: true, saramin: false } });
+    expect(status).toEqual({ available: true, providers: { work24: true, saramin: false, jooble: false } });
     expect(JSON.stringify(status)).not.toMatch(/key/i);
   });
 
   it('treats a missing credential endpoint (static/desktop server) as unavailable', async () => {
     vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify({ error: { code: 'NOT_FOUND' } }), { status: 404, headers: { 'Content-Type': 'application/json' } })));
-    expect(await fetchCredentialStatus()).toEqual({ available: false, providers: { work24: false, saramin: false } });
+    expect(await fetchCredentialStatus()).toEqual({ available: false, providers: { work24: false, saramin: false, jooble: false } });
   });
 
   it('sends the key only in a bounded JSON PUT body and returns booleans', async () => {
     const mock = vi.fn(async () => Response.json({ providers: [
       { provider: 'work24', configured: true },
       { provider: 'saramin', configured: false },
+      { provider: 'jooble', configured: false },
     ] }));
     vi.stubGlobal('fetch', mock);
     const result = await saveCredential('work24', 'test-only-key');
-    expect(result).toEqual({ work24: true, saramin: false });
+    expect(result).toEqual({ work24: true, saramin: false, jooble: false });
     const [url, init] = mock.mock.calls[0] as unknown as [string, RequestInit];
     expect(url).toContain('/api/credentials/work24');
     expect(init.method).toBe('PUT');

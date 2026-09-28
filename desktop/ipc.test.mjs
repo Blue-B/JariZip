@@ -67,19 +67,20 @@ test('main-process failures surface as plain errors without leaking the raw resu
   assert.equal(unwrapIpcResult({ ok: true, value: 1 }), 1);
 });
 
-test('status validation accepts exactly two known providers and drops unknown fields', () => {
-  const good = validateStatus({ providers: [{ provider: 'work24', configured: false }, { provider: 'saramin', configured: true }], encryptionAvailable: true, secret: 'ignored' });
-  assert.deepEqual(good, { providers: [{ provider: 'work24', configured: false }, { provider: 'saramin', configured: true }], encryptionAvailable: true });
+test('status validation accepts exactly the three known providers and drops unknown fields', () => {
+  const good = validateStatus({ providers: [{ provider: 'work24', configured: false }, { provider: 'saramin', configured: true }, { provider: 'jooble', configured: true }], encryptionAvailable: true, secret: 'ignored' });
+  assert.deepEqual(good, { providers: [{ provider: 'work24', configured: false }, { provider: 'saramin', configured: true }, { provider: 'jooble', configured: true }], encryptionAvailable: true });
   assert.equal(JSON.stringify(good).includes('secret'), false);
   for (const bad of [
     null, 'x', [],
-    { providers: [{ provider: 'wanted', configured: true }, { provider: 'saramin', configured: true }] },
-    { providers: [{ provider: 'work24', configured: 'yes' }, { provider: 'saramin', configured: true }] },
+    { providers: [{ provider: 'wanted', configured: true }, { provider: 'saramin', configured: true }, { provider: 'jooble', configured: true }] },
+    { providers: [{ provider: 'work24', configured: 'yes' }, { provider: 'saramin', configured: true }, { provider: 'jooble', configured: false }] },
     { providers: [{ provider: 'work24', configured: true }] },
-    { providers: [{ provider: 'work24', configured: true }, { provider: 'work24', configured: true }] },
-    { providers: [{ provider: 'work24', configured: true }, { provider: 'saramin', key: 'leak' }] },
+    { providers: [{ provider: 'work24', configured: true }, { provider: 'work24', configured: true }, { provider: 'jooble', configured: true }] },
+    { providers: [{ provider: 'work24', configured: true }, { provider: 'saramin', key: 'leak' }, { provider: 'jooble', configured: false }] },
   ]) assert.throws(() => validateStatus(bad));
   assert.equal(isProvider('work24'), true);
+  assert.equal(isProvider('jooble'), true);
   assert.equal(isProvider('wanted'), false);
 });
 

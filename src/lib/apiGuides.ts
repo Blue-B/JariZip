@@ -11,6 +11,7 @@ export interface ProviderGuide {
   name: string;
   org: string;
   envKey: string;
+  keyLabel: string;
   recommended: boolean;
   page: string;
   pageLabel: string;
@@ -23,6 +24,7 @@ export const PROVIDER_GUIDES: Record<ApiProvider, ProviderGuide> = {
     name: '고용24',
     org: '한국고용정보원',
     envKey: 'WORK24_AUTH_KEY',
+    keyLabel: '인증키',
     recommended: true,
     page: 'https://www.work24.go.kr/cm/e/a/0110/selectOpenApiIntro.do',
     pageLabel: '고용24 Open API 안내 열기',
@@ -38,6 +40,7 @@ export const PROVIDER_GUIDES: Record<ApiProvider, ProviderGuide> = {
     name: '사람인',
     org: '사람인',
     envKey: 'SARAMIN_ACCESS_KEY',
+    keyLabel: 'access-key',
     recommended: false,
     page: 'https://oapi.saramin.co.kr/guide/info',
     pageLabel: '사람인 API 안내 열기',
@@ -45,6 +48,21 @@ export const PROVIDER_GUIDES: Record<ApiProvider, ProviderGuide> = {
       '사람인 채용정보 API 이용을 신청해요.',
       '승인을 받은 뒤 앱별 access-key를 발급받아요.',
       '발급받은 access-key를 아래에 붙여넣어요.',
+    ],
+  },
+  jooble: {
+    id: 'jooble',
+    name: '조블',
+    org: 'Jooble',
+    envKey: 'JOOBLE_API_KEY',
+    keyLabel: 'API 키',
+    recommended: false,
+    page: 'https://kr.jooble.org/api/about',
+    pageLabel: '조블 API 안내 열기',
+    steps: [
+      '조블 API 페이지에서 API 키를 발급받아요.',
+      '키는 서버에서만 보관하고 사용자 화면과 앱 로그에는 노출하지 않아요.',
+      '발급받은 API 키를 아래에 붙여넣어요.',
     ],
   },
 };

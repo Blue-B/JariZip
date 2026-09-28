@@ -14,13 +14,13 @@ import { test, expect, type Page } from '@playwright/test';
 const WORK24_KEY = 'test-only-work24-key-0001';
 
 interface CredentialMock {
-  status: { work24: boolean; saramin: boolean };
+  status: { work24: boolean; saramin: boolean; jooble: boolean };
   puts: Array<{ provider: string; key: string }>;
   deletes: string[];
 }
 
-async function mockCredentials(page: Page, initial: { work24?: boolean; saramin?: boolean } = {}, options: { failPut?: string; failProbe?: string } = {}) {
-  const state = { work24: Boolean(initial.work24), saramin: Boolean(initial.saramin) };
+async function mockCredentials(page: Page, initial: { work24?: boolean; saramin?: boolean; jooble?: boolean } = {}, options: { failPut?: string; failProbe?: string } = {}) {
+  const state = { work24: Boolean(initial.work24), saramin: Boolean(initial.saramin), jooble: Boolean(initial.jooble) };
   const mock: CredentialMock = { status: state, puts: [], deletes: [] };
   await page.route('**/api/credentials**', async route => {
     const request = route.request();
@@ -29,23 +29,26 @@ async function mockCredentials(page: Page, initial: { work24?: boolean; saramin?
       return route.fulfill({ json: { providers: [
         { provider: 'work24', configured: state.work24 },
         { provider: 'saramin', configured: state.saramin },
+        { provider: 'jooble', configured: state.jooble },
       ] } });
     }
     if (request.method() === 'PUT') {
       const body = request.postDataJSON() as { key?: string };
       mock.puts.push({ provider, key: String(body?.key ?? '') });
       if (options.failPut) return route.fulfill({ status: 400, json: { error: { code: 'BAD_KEY', message: options.failPut } } });
-      state[provider as 'work24' | 'saramin'] = true;
+      state[provider as 'work24' | 'saramin' | 'jooble'] = true;
       return route.fulfill({ json: { provider, configured: true, providers: [
         { provider: 'work24', configured: state.work24 },
         { provider: 'saramin', configured: state.saramin },
+        { provider: 'jooble', configured: state.jooble },
       ] } });
     }
     mock.deletes.push(provider);
-    state[provider as 'work24' | 'saramin'] = false;
+    state[provider as 'work24' | 'saramin' | 'jooble'] = false;
     return route.fulfill({ json: { provider, configured: false, providers: [
       { provider: 'work24', configured: state.work24 },
       { provider: 'saramin', configured: state.saramin },
+      { provider: 'jooble', configured: state.jooble },
     ] } });
   });
   await page.route('**/api/sources', route => route.fulfill({ json: { sources: [
@@ -195,7 +198,7 @@ test('the browser key controls never appear when the desktop bridge is present',
   await page.addInitScript(() => {
     (window as unknown as { jarizipDesktop: unknown }).jarizipDesktop = {
       getInfo: async () => ({ platform: 'win32', version: '0.1.0-test' }),
-      getApiKeyStatus: async () => ({ work24: true, saramin: false }),
+      getApiKeyStatus: async () => ({ work24: true, saramin: false, jooble: false }),
       setApiKey: async () => ({ ok: true }),
       clearApiKey: async () => ({ ok: true }),
       openExternal: async () => undefined,

@@ -161,7 +161,7 @@ interface ApiSetupWizardProps {
 function ApiSetupWizard({ bridge, status, onRefreshStatus, onClose, onAddManual, onBrowse }: ApiSetupWizardProps) {
   const { notify } = useWorkspace();
   const [stage, setStage] = useState<Stage>(() => (status?.work24 || status?.saramin) ? 'overview' : 'choose');
-  const [provider, setProvider] = useState<ApiProvider>(() => status?.work24 ? 'work24' : status?.saramin ? 'saramin' : 'work24');
+  const [provider, setProvider] = useState<ApiProvider>(() => status?.work24 ? 'work24' : status?.saramin ? 'saramin' : status?.jooble ? 'jooble' : 'work24');
   // The key only lives here while the user is typing or retrying a failed save.
   const [key, setKey] = useState('');
   const [showKey, setShowKey] = useState(false);
@@ -326,7 +326,7 @@ function ApiSetupWizard({ bridge, status, onRefreshStatus, onClose, onAddManual,
           {keySaved
             ? <p className="api-setup-saved-note" role="status">키는 이미 이 기기에 저장됐어요. 다시 붙여넣을 필요 없이 아래에서 연결을 다시 확인할 수 있어요.</p>
             : <label className="api-setup-field">
-                <span>{guide.name} {guide.id === 'work24' ? '인증키' : 'access-key'}</span>
+                <span>{guide.name} {guide.keyLabel}</span>
                 <span className="field-hint">붙여넣은 키는 저장한 뒤 이 화면에서 바로 지워지고, 브라우저 저장소나 백업 파일에는 남지 않아요.</span>
                 <span className="api-setup-input">
                   <KeyRound size={17} aria-hidden/>

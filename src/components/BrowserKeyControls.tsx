@@ -92,7 +92,7 @@ export default function BrowserKeyControls({ provider, configured, onChanged, on
             {guide.pageLabel}<ArrowUpRight size={15} aria-hidden/>
           </a>
           <label className="browser-key-field">
-            <span>{guide.name} {provider === 'work24' ? '인증키' : 'access-key'}</span>
+            <span>{guide.name} {guide.keyLabel}</span>
             <span className="field-hint">붙여넣은 키는 설정한 뒤 이 화면에서 바로 지워지고, 브라우저 저장소에는 남지 않아요.</span>
             <span className="browser-key-input">
               <KeyRound size={17} aria-hidden/>

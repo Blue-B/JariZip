@@ -14,7 +14,7 @@
 
 처음 실행하면 **공고 연결 마법사**가 열립니다.
 
-1. **고용24 또는 사람인 선택**
+1. **고용24·사람인·조블 중 선택**
 2. 앱에서 공식 API 발급 안내 페이지 열기
 3. 발급받은 개인 API 키 붙여넣기
 4. **저장하고 연결 확인** 클릭
@@ -32,13 +32,14 @@ API 키는 GitHub 저장소나 브라우저 저장소에 남기지 않고, 데�
 | --- | --- | --- |
 | **고용24** | 지원 | 본인이 발급받은 `WORK24_AUTH_KEY` |
 | **사람인** | 지원 | 본인이 발급받은 `SARAMIN_ACCESS_KEY` |
+| **조블** | 지원 (목록 검색) | 본인이 발급받은 `JOOBLE_API_KEY` |
 | 원티드 | 자동조회 미지원 | 원문 링크를 직접 열어 기록 |
 | 점핏 | 자동조회 미지원 | 원문 링크를 직접 열어 기록 |
 | 직행 | 자동조회 미지원 | 원문 링크를 직접 열어 기록 |
 
-**원티드·점핏·직행은 API 키 없이 자동 조회되는 출처가 아닙니다.** 현재 JariZip에서 사용 권한이 확인된 공식 자동조회 API가 없어 자동 조회와 키 설정을 제공하지 않습니다. 원문 링크를 직접 열어 공고를 기록해주세요. 공식 API 사용 권한이 확인된 고용24·사람인만 개인 키로 연결합니다.
+**원티드·점핏·직행은 API 키 없이 자동 조회되는 출처가 아닙니다.** 현재 JariZip에서 사용 권한이 확인된 공식 자동조회 API가 없어 자동 조회와 키 설정을 제공하지 않습니다. 원문 링크를 직접 열어 공고를 기록해주세요. 공식 API 사용 권한이 확인된 고용24·사람인·조블만 개인 키로 연결합니다.
 
-공식 안내: [고용24 Open API](https://www.work24.go.kr/cm/e/a/0110/selectOpenApiIntro.do) · [사람인 API](https://oapi.saramin.co.kr/guide/info)
+공식 안내: [고용24 Open API](https://www.work24.go.kr/cm/e/a/0110/selectOpenApiIntro.do) · [사람인 API](https://oapi.saramin.co.kr/guide/info) · [조블 API](https://kr.jooble.org/api/about)
 
 ## 할 수 있는 일
 
@@ -79,6 +80,7 @@ npm start
 ```env
 WORK24_AUTH_KEY=
 SARAMIN_ACCESS_KEY=
+JOOBLE_API_KEY=
 ```
 
 데스크톱 개발/패키징:

@@ -10,14 +10,15 @@ import { test, expect, type Page } from '@playwright/test';
 interface FakeBridgeOptions {
   work24?: boolean;
   saramin?: boolean;
+  jooble?: boolean;
   /** Fail the first setApiKey call with this message (once). */
   failSaveOnce?: string;
 }
 
 async function injectBridge(page: Page, options: FakeBridgeOptions = {}) {
-  const { work24 = false, saramin = false, failSaveOnce } = options;
+  const { work24 = false, saramin = false, jooble = false, failSaveOnce } = options;
   await page.addInitScript(({ initial, failSave }) => {
-    const status = { work24: initial.work24, saramin: initial.saramin };
+    const status = { work24: initial.work24, saramin: initial.saramin, jooble: initial.jooble };
     const calls: Array<{ method: string; provider?: string; url?: string; keyLength?: number }> = [];
     const keyValues: string[] = [];
     let failed = false;
@@ -25,15 +26,15 @@ async function injectBridge(page: Page, options: FakeBridgeOptions = {}) {
     (window as unknown as { __jarizipKeyValuesSeen: string[] }).__jarizipKeyValuesSeen = keyValues;
     (window as unknown as { jarizipDesktop: unknown }).jarizipDesktop = {
       getInfo: async () => { calls.push({ method: 'getInfo' }); return { platform: 'win32', version: '0.1.0-test' }; },
-      getApiKeyStatus: async () => { calls.push({ method: 'getApiKeyStatus' }); return { work24: status.work24, saramin: status.saramin }; },
-      setApiKey: async (provider: 'work24' | 'saramin', key: string) => {
+      getApiKeyStatus: async () => { calls.push({ method: 'getApiKeyStatus' }); return { work24: status.work24, saramin: status.saramin, jooble: status.jooble }; },
+      setApiKey: async (provider: 'work24' | 'saramin' | 'jooble', key: string) => {
         calls.push({ method: 'setApiKey', provider, keyLength: key.length });
         keyValues.push(key);
         if (failSave && !failed) { failed = true; return { ok: false, message: failSave }; }
         status[provider] = true;
         return { ok: true };
       },
-      clearApiKey: async (provider: 'work24' | 'saramin') => {
+      clearApiKey: async (provider: 'work24' | 'saramin' | 'jooble') => {
         calls.push({ method: 'clearApiKey', provider });
         status[provider] = false;
         return { ok: true };
@@ -41,7 +42,7 @@ async function injectBridge(page: Page, options: FakeBridgeOptions = {}) {
       openExternal: async (url: string) => { calls.push({ method: 'openExternal', url }); },
       __readStatus: () => ({ ...status }),
     };
-  }, { initial: { work24, saramin }, failSave: failSaveOnce ?? null });
+  }, { initial: { work24, saramin, jooble }, failSave: failSaveOnce ?? null });
 }
 
 async function mockJobApi(page: Page, options: { failProbe?: string } = {}) {
@@ -100,6 +101,7 @@ test('browser mode shows inline key controls on the source rows instead of the d
   await page.route('**/api/credentials**', route => route.fulfill({ json: { providers: [
     { provider: 'work24', configured: false },
     { provider: 'saramin', configured: false },
+    { provider: 'jooble', configured: false },
   ] } }));
   await page.goto('/#/app/settings', { waitUntil: 'networkidle' });
   await expect(page.getByRole('dialog')).toHaveCount(0);

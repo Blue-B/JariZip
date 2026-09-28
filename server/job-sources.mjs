@@ -2,7 +2,7 @@
 // Official, permission-based sources only. The normalizers below are kept inert for fixture
 // and schema tests but the unofficial Wanted/Jumpit/Zighang endpoints are never called here.
 import { fingerprint, MAX_PAGE, streamJobs } from './job-stream.mjs';
-import { isJobLocation, isJobCategory, isJobExperience, SARAMIN_LOCATIONS, WORK24_REGIONS, WORK24_OCCUPATIONS, WORK24_CAREER } from './job-catalog.mjs';
+import { isJobLocation, isJobCategory, isJobExperience, JOB_LOCATION_NAMES, SARAMIN_LOCATIONS, WORK24_REGIONS, WORK24_OCCUPATIONS, WORK24_CAREER } from './job-catalog.mjs';
 import { childOf, childrenOf, textOf, leafObjectOf, parseXml, XmlError } from './xml.mjs';
 
 export class SourceError extends Error {
@@ -121,6 +121,36 @@ export function normalizeZighang(value, checkedAt) {
   };
 }
 
+/**
+ * A Jooble search result. Jooble is an aggregator: `link` points at the original outbound
+ * posting, so it is stored only as the attribution URL and is never used to infer a source
+ * identity. `id`, `title`, `company`, `location`, `snippet`, `salary`, `type`, `updated` and
+ * the upstream `source` label are normalized; missing fields stay honestly empty.
+ */
+export function normalizeJooble(value, checkedAt) {
+  const raw = object(value);
+  const id = text(typeof raw.id === 'number' ? String(raw.id) : raw.id, 64);
+  const title = text(raw.title, 200);
+  const company = text(raw.company, 200);
+  const link = text(raw.link, 2000);
+  if (!/^[0-9A-Za-z_-]{1,64}$/.test(id) || !title || !company || !/^https:\/\//i.test(link)) {
+    throw new SourceError('조블 공고 응답 형식이 바뀌었어요.', 502, 'SOURCE_FORMAT');
+  }
+  const updated = iso(raw.updated) || koreaDate(raw.updated);
+  const sourceLabel = text(raw.source, 200);
+  return {
+    id: `jooble-${id}`, company, title, role: '미분류',
+    location: text(raw.location, 200) || '지역 미기재',
+    experience: '경력 미기재', employment: text(raw.type, 200) || '미기재',
+    salary: text(raw.salary, 200) || '미기재', skills: [],
+    publishedAt: updated, deadline: '', deadlineType: 'unknown', status: 'open',
+    verification: 'source', verifiedAt: checkedAt, source: '조블', sourceUrl: link,
+    description: text(raw.snippet) || `${title}\n\n조블 검색 API가 제공한 요약입니다. 전체 내용은 원문 링크에서 확인해주세요.`,
+    requirements: '', benefits: '',
+    companyInfo: sourceLabel ? `출처: ${sourceLabel}` : '', saved: false, isDemo: false, color: 'ink',
+  };
+}
+
 const WORK24_CAREER_LABELS = Object.freeze({ N: '신입', E: '경력', Z: '경력 무관' });
 
 // Employment type codes from the official list-endpoint documentation; unmapped codes stay '미기재'.
@@ -220,11 +250,12 @@ export function normalizeWork24(value, checkedAt) {
 /** Unofficial endpoints that require prior written permission. Never called automatically. */
 export const UNAPPROVED_SOURCES = Object.freeze(['wanted', 'jumpit', 'zighang']);
 /** Providers with an official, permission-based API wired into this server. */
-export const APPROVED_SOURCES = Object.freeze(['saramin', 'work24']);
+export const APPROVED_SOURCES = Object.freeze(['saramin', 'work24', 'jooble']);
 
 export function sourceConfiguration(env = process.env) {
   const saraminConfigured = Boolean(env.SARAMIN_ACCESS_KEY);
   const work24Configured = Boolean(env.WORK24_AUTH_KEY);
+  const joobleConfigured = Boolean(env.JOOBLE_API_KEY);
   return [
     { id: 'saramin', name: '사람인', enabled: saraminConfigured, note: saraminConfigured
       ? '공식 채용 정보 API · 서버에 개인 발급 키 설정됨. 제공사 승인 범위와 1일 500회 공식 한도 안에서만 사용하세요.'
@@ -232,15 +263,20 @@ export function sourceConfiguration(env = process.env) {
     { id: 'work24', name: '고용24', enabled: work24Configured, note: work24Configured
       ? '고용24(한국고용정보원) 공식 Open API · 서버에 발급받은 WORK24_AUTH_KEY 설정됨. 결과는 원문 링크·출처 표시와 함께 제공해야 하며, 승인 범위 안에서만 사용하세요.'
       : '고용24 공식 Open API · 서버의 .env.local에 발급받은 WORK24_AUTH_KEY를 설정해야 사용할 수 있어요. 고용24 기업회원 로그인 후 서비스별 심사·승인·인증키 발급이 필요하며, 인증키는 타인에게 양도할 수 없습니다.' },
+    { id: 'jooble', name: '조블', enabled: joobleConfigured, note: joobleConfigured
+      ? '조블 공식 검색 API · 서버에 발급받은 JOOBLE_API_KEY 설정됨. 조블은 여러 사이트의 공고를 모아 제공하므로 접수 상태·마감일은 원문 링크에서 확인하고, 출처 표시와 원문 연결 조건을 지켜주세요.'
+      : '조블 공식 검색 API · 서버의 .env.local에 발급받은 JOOBLE_API_KEY를 설정해야 사용할 수 있어요. 조블 API 키는 서버에서만 보관하며 화면·로그·URL로 되돌려주지 않습니다.' },
     { id: 'wanted', name: '원티드', enabled: false, note: '공식 제휴 API 아님 · 제공사 사전 승인 없이 자동 수집하지 않아요. 원문 사이트에서 직접 확인하고 보관해주세요.' },
     { id: 'jumpit', name: '점핏', enabled: false, note: '공식 제휴 API 아님 · 제공사 사전 승인 없이 자동 수집하지 않아요. 원문 사이트에서 직접 확인하고 보관해주세요.' },
     { id: 'zighang', name: '직행', enabled: false, note: '공식 제휴 API 아님 · 제공사 사전 승인 없이 자동 수집하지 않아요. 원문 사이트에서 직접 확인하고 보관해주세요.' },
   ];
 }
 
-async function readJson(url, fetcher) {
+async function readJson(url, fetcher, { method = 'GET', body } = {}) {
   let response;
-  try { response = await fetcher(url, { headers: { Accept: 'application/json' }, redirect: 'error', signal: AbortSignal.timeout(12000) }); }
+  const init = { method, headers: { Accept: 'application/json' }, redirect: 'error', signal: AbortSignal.timeout(12000) };
+  if (body !== undefined) { init.headers['Content-Type'] = 'application/json'; init.body = JSON.stringify(body); }
+  try { response = await fetcher(url, init); }
   catch { throw new SourceError('채용 서비스에 연결하지 못했어요. 잠시 후 다시 시도해주세요.', 502, 'SOURCE_UNAVAILABLE'); }
   if (!response.ok) {
     if ([404, 410].includes(response.status)) throw new SourceError('원본에서 공고를 찾을 수 없어요. 마감되거나 삭제됐을 수 있어요.', 404, 'NOT_FOUND');
@@ -283,7 +319,7 @@ function matchesCareer(raw, experience) {
   const min = level.min, max = level.max;
   return Number.isFinite(min) && min <= years && (!Number.isFinite(max) || max >= years);
 }
-const normalizers = { wanted: normalizeWanted, saramin: normalizeSaramin, jumpit: normalizeJumpit, zighang: normalizeZighang, work24: normalizeWork24 };
+const normalizers = { wanted: normalizeWanted, saramin: normalizeSaramin, jumpit: normalizeJumpit, zighang: normalizeZighang, work24: normalizeWork24, jooble: normalizeJooble };
 // Work24 serves XML, not JSON. Bounded to a single page of at most 100 displayed rows or one detail.
 export const WORK24_LIST_URL = 'https://www.work24.go.kr/cm/openApi/call/wk/callOpenApiSvcInfo210L01.do';
 export const WORK24_DETAIL_URL = 'https://www.work24.go.kr/cm/openApi/call/wk/callOpenApiSvcInfo210D01.do';
@@ -291,6 +327,12 @@ export const WORK24_PAGE_SIZE = 100;
 // `startPage` is 1-based and capped at 1000 by the official documentation, so the largest
 // zero-based page index that keeps `startPage <= 1000` is 9 (10 pages of 100 rows).
 export const WORK24_MAX_PAGE = 9;
+// Jooble is a POST search API with a 1-based `page`. JariZip deliberately requests 20 rows per
+// page (`ResultOnPage`); continuation is computed from the response `totalCount`.
+export const JOOBLE_SEARCH_URL = 'https://kr.jooble.org/api/';
+export const JOOBLE_PAGE_SIZE = 20;
+/** Jooble aggregator pages are durable: cache them for 12 hours unless explicitly refreshed. */
+export const JOOBLE_CACHE_TTL_MS = 12 * 60 * 60 * 1000;
 const WORK24_INFO_SVC = 'VALIDATION';
 // Public original-listing URLs. `infoSvc=VALIDATION` is required by the detail API and by this link.
 const work24ListUrl = wantedAuthNo => `https://www.work24.go.kr/wk/a/b/1500/empDetailAuthView.do?wantedAuthNo=${encodeURIComponent(wantedAuthNo)}&infoTypeCd=${WORK24_INFO_SVC}&infoTypeGroup=tb_workinfoworknet`;
@@ -328,9 +370,9 @@ async function readXml(url, fetcher) {
 
 export function createJobService({ fetcher = fetch, env = process.env, now = () => new Date() } = {}) {
   const cache = new Map(), inflight = new Map();
-  async function obtain(key, load, refresh = false) {
+  async function obtain(key, load, refresh = false, ttl = 60000) {
     const old = cache.get(key);
-    if (!refresh && old && Date.now() - old.at < 60000) return { ...old.value, cached: true };
+    if (!refresh && old && Date.now() - old.at < ttl) return { ...old.value, cached: true };
     if (inflight.has(key)) return inflight.get(key);
     if (inflight.size >= 12) throw new SourceError('조회가 진행 중이에요. 잠시 후 다시 시도해주세요.', 429, 'BUSY');
     const pending = load().then(value => {
@@ -345,6 +387,7 @@ export function createJobService({ fetcher = fetch, env = process.env, now = () 
     if (!APPROVED_SOURCES.includes(provider)) throw new SourceError('이 출처는 제공사의 사전 승인 없이 자동으로 조회하지 않아요. 원문 사이트에서 직접 확인해주세요.', 403, 'SOURCE_NOT_PERMITTED');
     if (provider === 'saramin' && !env.SARAMIN_ACCESS_KEY) throw new SourceError('사람인은 서버에 발급받은 API 키를 설정해야 해요.', 503, 'KEY_REQUIRED');
     if (provider === 'work24' && !env.WORK24_AUTH_KEY) throw new SourceError('고용24는 서버에 발급받은 인증키(WORK24_AUTH_KEY)를 설정해야 해요.', 503, 'KEY_REQUIRED');
+    if (provider === 'jooble' && !env.JOOBLE_API_KEY) throw new SourceError('조블은 서버에 발급받은 API 키(JOOBLE_API_KEY)를 설정해야 해요.', 503, 'KEY_REQUIRED');
   }
   async function loadSaramin({ query, page, location, category, experience }) {
     const checkedAt = now().toISOString(), warnings = [];
@@ -415,6 +458,41 @@ export function createJobService({ fetcher = fetch, env = process.env, now = () 
     if (invalid) warnings.push(`형식을 읽지 못한 공고 ${invalid}건은 제외했어요.`);
     return { provider: 'work24', jobs, nextPage, checkedAt, warnings, pageFingerprint: values.length ? fingerprint(values.map(value => textOf(value, 'wantedAuthNo'))) : undefined, sourceResults: [{ id: 'work24', name: '고용24', count: jobs.length, status: 'ok', exhausted: nextPage === null }] };
   }
+  // Jooble is a POST aggregator search with a 1-based page. It has no per-id detail endpoint,
+  // so its results are list-only and never refreshed through Jooble or another provider.
+  async function loadJooble({ query, page, location, category, experience }) {
+    const checkedAt = now().toISOString(), warnings = [];
+    if (page > MAX_PAGE) return { provider: 'jooble', jobs: [], nextPage: null, checkedAt, warnings: ['조블은 안전한 조회 범위의 끝에 도달했어요. 조건을 좁혀 다시 검색해주세요.'], pageFingerprint: undefined, sourceResults: [{ id: 'jooble', name: '조블', count: 0, status: 'ok', exhausted: true }] };
+    const url = new URL(`${JOOBLE_SEARCH_URL}${encodeURIComponent(env.JOOBLE_API_KEY)}`);
+    const raw = await readJson(url, fetcher, { method: 'POST', body: {
+      keywords: query.trim(),
+      location: location === 'all' ? '' : (JOB_LOCATION_NAMES.get(location) || ''),
+      page: page + 1,
+      ResultOnPage: JOOBLE_PAGE_SIZE,
+    } });
+    if (!raw || typeof raw !== 'object') throw new SourceError('조블 공고 목록 응답 형식이 바뀌었어요.', 502, 'SOURCE_FORMAT');
+    if (raw.error || raw.code) throw new SourceError('조블 API 키, 권한 또는 사용 한도를 확인해주세요.', 503, 'SOURCE_RESTRICTED');
+    if (!Array.isArray(raw.jobs)) throw new SourceError('조블 공고 목록 응답 형식이 바뀌었어요.', 502, 'SOURCE_FORMAT');
+    const values = raw.jobs;
+    const total = Number(raw.totalCount) || 0;
+    let nextPage = (page + 1) * JOOBLE_PAGE_SIZE < total && page < MAX_PAGE ? page + 1 : null;
+    warnings.push('조블은 여러 채용 사이트의 공고를 모아 제공하는 검색 API입니다. 접수 상태와 상세 내용은 원문 링크에서 확인해주세요.');
+    if (category !== 'all' || experience !== 'all') warnings.push('조블은 분야·경력 조건을 출처에 전달하지 않고 현재 페이지 안에서만 적용해요. 전체 검색 결과의 총건수와는 다릅니다.');
+    if (experience !== 'all') warnings.push('조블은 경력 조건을 구조화해 제공하지 않아 경력 필터가 조블 결과에는 적용되지 않을 수 있어요.');
+    if (values.length === 0) nextPage = null;
+    if (page >= MAX_PAGE && values.length) warnings.push('안전한 조회 범위의 끝에 도달했어요. 조건을 좁혀 다시 검색해주세요.');
+    let invalid = 0;
+    const jobs = values.flatMap(value => {
+      try {
+        const job = normalizeJooble(value, checkedAt);
+        if (!matchesLocalCategory(job, category)) return [];
+        return [job];
+      } catch { invalid++; return []; }
+    });
+    if (invalid && invalid === values.length) throw new SourceError('공고 형식을 읽을 수 없어 결과를 표시하지 않았어요.', 502, 'SOURCE_FORMAT');
+    if (invalid) warnings.push(`형식을 읽지 못한 공고 ${invalid}건은 제외했어요.`);
+    return { provider: 'jooble', jobs, nextPage, checkedAt, warnings, pageFingerprint: values.length ? fingerprint(values.map(value => text(typeof object(value).id === 'number' ? String(object(value).id) : object(value).id, 64))) : undefined, sourceResults: [{ id: 'jooble', name: '조블', count: jobs.length, status: 'ok', exhausted: nextPage === null }] };
+  }
   async function search({ provider = 'all', query = '', page = 0, location = 'all', category = 'all', experience = 'all', refresh = false, cursor } = {}) {
     if (provider !== 'all') requireSource(provider);
     if (typeof query !== 'string' || query.length > 120 || !Number.isInteger(page) || page < 0 || page > MAX_PAGE || !isJobLocation(location) || !isJobCategory(category) || !isJobExperience(experience)) throw new SourceError('검색 조건을 확인해주세요.', 400, 'BAD_QUERY');
@@ -438,10 +516,13 @@ export function createJobService({ fetcher = fetch, env = process.env, now = () 
         sourceResults: results.map((result, index) => ({ id: enabled[index].id, name: enabled[index].name, count: result.status === 'fulfilled' ? result.value.jobs.length : 0, status: result.status === 'fulfilled' ? 'ok' : 'error', ...(result.status === 'rejected' ? { message: result.reason instanceof SourceError ? result.reason.message : '출처 응답을 읽지 못했어요.' } : {}) })),
       };
     }
-    return obtain(key, async () => provider === 'work24' ? loadWork24({ query, page, location, category, experience }) : loadSaramin({ query, page, location, category, experience }), refresh);
+    const loaders = { saramin: loadSaramin, work24: loadWork24, jooble: loadJooble };
+    const ttl = provider === 'jooble' ? JOOBLE_CACHE_TTL_MS : 60000;
+    return obtain(key, () => loaders[provider]({ query, page, location, category, experience }), refresh, ttl);
   }
   async function detail(provider, sourceId, refresh = false) {
     requireSource(provider);
+    if (provider === 'jooble') throw new SourceError('조블은 목록 검색만 지원해요. 상세 내용은 원문 링크에서 확인해주세요.', 400, 'SOURCE_NOT_SUPPORTED');
     const idPattern = provider === 'work24' ? /^[0-9A-Za-z]{1,40}$/ : /^\d{1,12}$/;
     if (!idPattern.test(String(sourceId))) throw new SourceError('공고 번호가 올바르지 않아요.', 400, 'BAD_ID');
     return obtain(`${provider}:${sourceId}`, async () => {

@@ -4,8 +4,8 @@
 // import. It intentionally has no Node or Electron imports, so loading the preload never
 // pulls filesystem or crypto code into the renderer process.
 /** Officially approved providers only. Wanted/Jumpit/Zighang have no agreed API permission. */
-export const PROVIDERS = Object.freeze(['work24', 'saramin']);
+export const PROVIDERS = Object.freeze(['work24', 'saramin', 'jooble']);
 /** Environment variable each provider adapter reads at request time. */
-export const PROVIDER_ENV = Object.freeze({ work24: 'WORK24_AUTH_KEY', saramin: 'SARAMIN_ACCESS_KEY' });
+export const PROVIDER_ENV = Object.freeze({ work24: 'WORK24_AUTH_KEY', saramin: 'SARAMIN_ACCESS_KEY', jooble: 'JOOBLE_API_KEY' });
 /** Longest accepted credential. Real Work24/Saramin keys are far shorter; this only bounds abuse. */
 export const MAX_KEY_LENGTH = 512;

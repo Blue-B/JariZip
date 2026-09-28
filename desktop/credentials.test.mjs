@@ -25,9 +25,9 @@ async function withStore(run, { available = true, backend = 'basic_text' } = {})
   } finally { await rm(directory, { recursive: true, force: true }); }
 }
 
-test('only the two officially approved providers are accepted', async () => {
-  assert.deepEqual([...PROVIDERS], ['work24', 'saramin']);
-  assert.deepEqual(PROVIDER_ENV, { work24: 'WORK24_AUTH_KEY', saramin: 'SARAMIN_ACCESS_KEY' });
+test('only the officially approved providers are accepted', async () => {
+  assert.deepEqual([...PROVIDERS], ['work24', 'saramin', 'jooble']);
+  assert.deepEqual(PROVIDER_ENV, { work24: 'WORK24_AUTH_KEY', saramin: 'SARAMIN_ACCESS_KEY', jooble: 'JOOBLE_API_KEY' });
   await withStore(store => {
     assert.equal(store.get('work24'), null);
     for (const provider of ['wanted', 'jumpit', 'zighang', '', 'WORK24', null, 42, undefined]) {
@@ -77,7 +77,7 @@ test('status exposes booleans only, never a key', async () => {
   await withStore(store => {
     store.set('saramin', 'saramin-test-key');
     const status = store.providers();
-    assert.deepEqual(status, [{ provider: 'work24', configured: false }, { provider: 'saramin', configured: true }]);
+    assert.deepEqual(status, [{ provider: 'work24', configured: false }, { provider: 'saramin', configured: true }, { provider: 'jooble', configured: false }]);
     assert.equal(JSON.stringify(status).includes('saramin-test-key'), false);
   });
 });

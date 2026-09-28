@@ -2,12 +2,12 @@ import { parseRemoteJob } from './domain';
 import { canonicalJobUrl } from './jobSearch';
 import type { Job, WorkspaceState } from './types';
 
-export type JobSource = 'wanted' | 'saramin' | 'jumpit' | 'zighang' | 'work24';
+export type JobSource = 'wanted' | 'saramin' | 'jumpit' | 'zighang' | 'work24' | 'jooble';
 export type SearchSource = JobSource | 'all';
 export interface SourceResult { id: JobSource; name: string; count: number; status: 'ok' | 'error'; message?: string; exhausted?: boolean; scannedPages?: number }
 export interface SearchResult { jobs: Job[]; nextPage: number | null; checkedAt: string; warnings: string[]; cached: boolean; total?: number; sourceResults: SourceResult[]; nextCursor?: string | null }
 export interface SourceOption { id: JobSource; name: string; enabled: boolean; note: string }
-const providers: JobSource[] = ['wanted', 'saramin', 'jumpit', 'zighang', 'work24'];
+const providers: JobSource[] = ['wanted', 'saramin', 'jumpit', 'zighang', 'work24', 'jooble'];
 
 /**
  * Only providers with an official, permission-based API may be queried at runtime.
@@ -15,13 +15,14 @@ const providers: JobSource[] = ['wanted', 'saramin', 'jumpit', 'zighang', 'work2
  * if a stale or tampered source list marks them enabled. No click, checkbox or env flag
  * grants that permission. This mirrors the server-side block and fails before any network.
  */
-export const APPROVED_JOB_SOURCES: readonly JobSource[] = ['saramin', 'work24'];
+export const APPROVED_JOB_SOURCES: readonly JobSource[] = ['saramin', 'work24', 'jooble'];
 export const isApprovedSource = (source: JobSource): boolean => APPROVED_JOB_SOURCES.includes(source);
 
 /** Official public sites for normal outbound navigation. Never used for automated collection. */
 export const SOURCE_SITES: Record<JobSource, { name: string; url: string }> = {
   saramin: { name: '사람인', url: 'https://www.saramin.co.kr/' },
   work24: { name: '고용24', url: 'https://www.work24.go.kr/' },
+  jooble: { name: '조블', url: 'https://kr.jooble.org/' },
   wanted: { name: '원티드', url: 'https://www.wanted.co.kr/' },
   jumpit: { name: '점핏', url: 'https://jumpit.saramin.co.kr/' },
   zighang: { name: '직행', url: 'https://zighang.com/' },
@@ -74,18 +75,18 @@ export async function searchRemoteJobs(source: SearchSource, query: string, loca
 // secret back: they accept a key, return booleans, and are only used when the
 // desktop bridge is absent.
 
-export type CredentialProvider = 'work24' | 'saramin';
+export type CredentialProvider = 'work24' | 'saramin' | 'jooble';
 
 export interface CredentialStatus {
   available: boolean;
   providers: Record<CredentialProvider, boolean>;
 }
 
-const CREDENTIAL_PROVIDERS: CredentialProvider[] = ['work24', 'saramin'];
+const CREDENTIAL_PROVIDERS: CredentialProvider[] = ['work24', 'saramin', 'jooble'];
 
 function parseCredentialProviders(value: unknown): Record<CredentialProvider, boolean> | null {
   if (!Array.isArray(value)) return null;
-  const status = { work24: false, saramin: false };
+  const status = Object.fromEntries(CREDENTIAL_PROVIDERS.map(provider => [provider, false])) as Record<CredentialProvider, boolean>;
   let known = false;
   for (const entry of value) {
     if (!entry || typeof entry !== 'object') continue;
@@ -126,7 +127,7 @@ async function credentialRequest(method: 'GET' | 'PUT' | 'DELETE', provider: Cre
 
 /** GET status booleans. `available: false` when this server has no credential store. */
 export async function fetchCredentialStatus(signal?: AbortSignal): Promise<CredentialStatus> {
-  const unavailable: CredentialStatus = { available: false, providers: { work24: false, saramin: false } };
+  const unavailable: CredentialStatus = { available: false, providers: Object.fromEntries(CREDENTIAL_PROVIDERS.map(provider => [provider, false])) as Record<CredentialProvider, boolean> };
   let response: Response;
   try {
     response = await fetch(`${api}/credentials`, { signal: AbortSignal.any([AbortSignal.timeout(15000), ...(signal ? [signal] : [])]), headers: { Accept: 'application/json' } });
@@ -157,7 +158,10 @@ export async function probeSource(source: JobSource, signal?: AbortSignal): Prom
   if (!isApprovedSource(source)) throw new Error('이 출처는 제공사의 사전 승인 없이 자동으로 조회하지 않아요. 원문 사이트에서 직접 확인해주세요.');
   return searchRemoteJobs(source, '', 'all', 0, signal, true);
 }
-export function sourceIdentity(job: Pick<Job, 'sourceUrl'>): { source: JobSource; id: string } | null {
+export function sourceIdentity(job: Pick<Job, 'sourceUrl'> & { id?: string }): { source: JobSource; id: string } | null {
+  // Jooble's outbound `link` points at an arbitrary third-party site, so a Jooble result
+  // must never be mapped back to Jooble or to another provider from its URL alone.
+  if (typeof job.id === 'string' && job.id.startsWith('jooble-')) return null;
   try {
     const url = new URL(job.sourceUrl);
     if (url.protocol !== 'https:' || url.username || url.password || (url.port && url.port !== '443')) return null;
@@ -174,7 +178,7 @@ export function sourceIdentity(job: Pick<Job, 'sourceUrl'>): { source: JobSource
   } catch { /* Other sources can still be imported manually. */ }
   return null;
 }
-export async function refreshRemoteJob(job: Pick<Job, 'sourceUrl'>, signal?: AbortSignal, refresh = true): Promise<Job> {
+export async function refreshRemoteJob(job: Pick<Job, 'sourceUrl'> & { id?: string }, signal?: AbortSignal, refresh = true): Promise<Job> {
   const identity = sourceIdentity(job);
   if (!identity || !isApprovedSource(identity.source)) throw new Error('이 출처는 자동 조회를 지원하지 않아요. 원문을 확인해 수동 기록해주세요.');
   const data = await request(`/jobs/${identity.source}/${identity.id}?refresh=${refresh ? '1' : '0'}`, signal);
@@ -186,7 +190,7 @@ export async function refreshRemoteJob(job: Pick<Job, 'sourceUrl'>, signal?: Abo
 }
 
 /** Whether this saved posting can be re-queried from an official source. Pure, no network. */
-export function canRefreshJob(job: Pick<Job, 'sourceUrl'>): boolean {
+export function canRefreshJob(job: Pick<Job, 'sourceUrl'> & { id?: string }): boolean {
   const identity = sourceIdentity(job);
   return Boolean(identity && isApprovedSource(identity.source));
 }
