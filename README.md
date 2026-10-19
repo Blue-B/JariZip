@@ -1,20 +1,12 @@
 # JariZip · 자리집
 
-**채용공고부터 실제 제출한 이력서 버전, 지원 현황, 면접 준비까지 한곳에서 관리하는 무료 로컬 앱.**
-
-**30초 기능 미리보기 · 1280×720 고화질 (가상 자료 시연)**
-
-<p align="center"><a href="docs/demo-30s.gif"><img src="docs/demo-30s.gif" width="960" alt="자리집의 공고 보관, 기술 비교, 서류 버전, 지원 현황, 면접 연습, 백업 기능을 순서대로 보여주는 1280×720 해상도의 30초 시연 애니메이션" /></a></p>
-
-<p align="center"><a href="docs/demo-30s.gif">애니메이션을 원본 해상도로 크게 보기</a></p>
-
-> 이 미리보기는 기능 설명을 위해 만든 **재현 화면**으로 실제 앱 조작을 녹화한 영상이 아닙니다. 실제 앱 화면은 아래 스크린샷과 [미리보기 모음](docs/preview/)에서 확인할 수 있습니다. 채용공고 자동 조회에는 제공사 승인을 받은 API 키가 필요하지만, 공고 직접 등록·서류 보관·지원 기록은 API 키 없이 사용할 수 있습니다.
-
-<img src="public/brand/jippi-wave.avif" width="110" alt="자리집 캐릭터 지피" />
-
-**채용공고, 실제 제출한 서류 버전, 지원 현황과 면접 준비를 내 PC에 모아두는 로컬 취업 기록 도구.**
+**채용공고 보관, 실제 제출한 서류 버전, 지원 현황과 면접 준비를 한곳에서 관리하는 무료 로컬 앱.**
 
 <p align="center"><img src="docs/preview/jobs.png" width="920" alt="JariZip 작업 화면" /></p>
+
+<p align="center"><a href="docs/preview/dashboard.png">내 공간</a> · <a href="docs/preview/applications.png">지원 현황</a> · <a href="docs/preview/documents.png">서류 보관함</a> · <a href="docs/preview/interview.png">면접 연습</a> · <a href="docs/preview/">전체 화면 보기</a></p>
+
+> 위 이미지는 실제 JariZip 인터페이스 스크린샷입니다. 채용공고 자동 조회에는 본인이 발급받은 API 키가 필요하지만, 공고 직접 추가·서류 보관·지원 기록은 키 없이 사용할 수 있습니다.
 
 ## 가장 쉬운 사용 방법
 
