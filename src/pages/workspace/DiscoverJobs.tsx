@@ -188,7 +188,7 @@ export default function DiscoverJobs() {
       <h2>지금 자동으로 불러오는 공식 출처가 없어요</h2>
       <p>{applied.source !== 'all' ? '선택한 출처는 제공사의 사전 승인이 확인되지 않아 자동으로 조회하지 않아요. ' : ''}공식 API가 승인된 출처만 자동으로 불러오며, 그 밖의 사이트는 원문에서 직접 확인해 보관할 수 있어요. 화면의 클릭이나 설정으로 제공사 허가를 대신하지 않아요.</p>
       <ul className="discover-optional-list">{officialSites.map(site => <li key={site.url}><a href={site.url} target="_blank" rel="noopener noreferrer">{site.name} 원문 사이트 열기<ArrowUpRight size={14} aria-hidden/></a></li>)}</ul>
-      <div className="discover-optional-actions"><Link className="button secondary" to="/app/jobs"><Bookmark size={15}/>보관한 공고·직접 추가</Link><Link className="button secondary" to="/app/settings">공고 연결 설정<ArrowUpRight size={14}/></Link></div>
+      <div className="discover-optional-actions"><Link className="button primary" to="/app/jobs?new=1"><Bookmark size={15}/>API 키 없이 공고 추가</Link><Link className="button secondary" to="/app/settings">공고 연결 설정<ArrowUpRight size={14}/></Link></div>
       <p className="discover-optional-note">원문에서 확인한 공고는 <strong>공고 직접 추가</strong>로 보관하면 접수 상태가 <strong>미확인</strong>으로 남고, 내가 확인한 날짜만 기록돼요.</p>
     </section>}
     {!paused && !sourcesError && sourcesReady && <div className="discover-feed-controls">

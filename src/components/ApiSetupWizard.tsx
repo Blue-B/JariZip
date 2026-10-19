@@ -294,7 +294,12 @@ function ApiSetupWizard({ bridge, status, onRefreshStatus, onClose, onAddManual,
         </div>
 
         {stage === 'choose' && <>
-          <p className="api-setup-lead">채용 공고를 자동으로 불러오려면 공식 API 키가 필요해요. 없다면 건너뛰고 공고를 직접 추가할 수도 있어요.</p>
+          <p className="api-setup-lead">API 키 없이도 채용공고를 직접 저장하고, 지원 현황과 제출 서류를 관리할 수 있어요.</p>
+          <div className="api-setup-foot">
+            <Button variant="primary" onClick={onAddManual}>API 키 없이 공고 추가하기<ArrowRight size={16} aria-hidden/></Button>
+            <Button variant="ghost" onClick={onClose}>나중에 하기</Button>
+          </div>
+          <p className="api-setup-lead">공고를 자동으로 검색하고 싶다면 아래 공식 출처에서 본인 API 키를 발급받아 연결해주세요.</p>
           <ul className="api-setup-choices">
             {(Object.keys(PROVIDERS) as ApiProvider[]).map(id => {
               const item = PROVIDERS[id];
@@ -312,10 +317,6 @@ function ApiSetupWizard({ bridge, status, onRefreshStatus, onClose, onAddManual,
               </li>;
             })}
           </ul>
-          <div className="api-setup-foot">
-            <Button variant="ghost" onClick={onClose}>나중에 하기</Button>
-            <Button variant="secondary" onClick={onAddManual}>공고 직접 추가하기</Button>
-          </div>
         </>}
 
         {stage === 'connect' && <>

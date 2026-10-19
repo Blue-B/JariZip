@@ -1,0 +1,54 @@
+name: 베타 사용 후기 (10분 테스트)
+description: API 키 없는 첫 사용에서 막힌 지점을 알려주세요. 실명·이력서·API 키는 올리지 마세요.
+title: "[베타 사용 후기] "
+labels: []
+body:
+  - type: markdown
+    attributes:
+      value: |
+        실제 이력서, 회사 지원 내역, 이름, 연락처, API 키, 개인 문서는 올리지 마세요.
+        구직자 10분 테스트 안내: https://github.com/Blue-B/JariZip/blob/main/docs/TESTER_GUIDE.md
+  - type: dropdown
+    id: environment
+    attributes:
+      label: 사용 환경
+      options:
+        - Windows 11
+        - Windows 10
+        - 기타 (아래에 설명)
+    validations:
+      required: true
+  - type: dropdown
+    id: first-task
+    attributes:
+      label: API 키 없이 공고를 직접 등록했나요?
+      options:
+        - 네, 등록 후 지원 준비까지 진행했어요
+        - 공고는 등록했지만 다음 단계에서 막혔어요
+        - 공고 등록부터 막혔어요
+        - 앱을 실행하지 못했어요
+    validations:
+      required: true
+  - type: textarea
+    id: experience
+    attributes:
+      label: 불편했던 점과 막힌 화면
+      description: 개인 정보는 제외하고, 무엇을 하려 했는지와 결과를 적어주세요.
+      placeholder: 첫 실행 후 ... 버튼을 눌렀는데 ...
+    validations:
+      required: true
+  - type: dropdown
+    id: return
+    attributes:
+      label: 실제 구직 활동에 다시 쓸 의향이 있나요?
+      options:
+        - 있음
+        - 없음
+        - 아직 판단하기 어려움
+    validations:
+      required: true
+  - type: textarea
+    id: improvement
+    attributes:
+      label: 한 가지만 바꾼다면?
+      description: 선택 입력입니다.

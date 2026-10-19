@@ -10,6 +10,7 @@ import { constants } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { BRIDGE_METHODS } from './ipc.mjs';
+import { PROVIDERS } from './providers.mjs';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const electron = join(root, 'node_modules', '.bin', process.platform === 'win32' ? 'electron.cmd' : 'electron');
@@ -64,12 +65,15 @@ async function main() {
   if (!report.platform || report.platform.platform !== process.platform) problems.push('platform payload is missing or wrong');
   if (typeof report.encryptionAvailable !== 'boolean') problems.push('encryption availability was not reported');
   const seen = values => values?.map(entry => entry.provider).join(',');
-  if (seen(report.before?.providers) !== 'work24,saramin,jooble') problems.push('credential status does not cover all providers');
-  if (typeof report.before?.providers?.[0]?.configured !== 'boolean') problems.push('credential status is not boolean-only');
+  if (seen(report.before?.providers) !== PROVIDERS.join(',')) problems.push('credential status does not cover all providers');
+  const work24Before = report.before?.providers?.find(entry => entry.provider === 'work24');
+  const work24During = report.during?.providers?.find(entry => entry.provider === 'work24');
+  const work24After = report.after?.providers?.find(entry => entry.provider === 'work24');
+  if (typeof work24Before?.configured !== 'boolean') problems.push('credential status is not boolean-only');
   if (report.encryptionAvailable) {
     if (report.setError) problems.push(`setApiKey failed with a synthetic key: ${report.setError}`);
-    if (report.during?.providers?.[0]?.configured !== true) problems.push('stored key was not reported as configured');
-    if (report.after?.providers?.[0]?.configured !== false) problems.push('cleared key is still reported as configured');
+    if (work24During?.configured !== true) problems.push('stored key was not reported as configured');
+    if (work24After?.configured !== false) problems.push('cleared key is still reported as configured');
   } else if (report.setError === null) {
     problems.push('setApiKey unexpectedly succeeded without OS encryption');
   }

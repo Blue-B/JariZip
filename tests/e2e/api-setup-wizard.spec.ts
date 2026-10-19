@@ -82,7 +82,28 @@ test('first run with no configured source auto-opens the Korean wizard and expla
   await expect(panel.locator('.api-setup-choice.is-recommended')).toContainText('고용24');
   await expect(panel.locator('.api-setup-choice.is-recommended')).toContainText('추천');
   await expect(panel.getByRole('button', { name: '나중에 하기', exact: true })).toBeVisible();
-  await expect(panel.getByRole('button', { name: '공고 직접 추가하기', exact: true })).toBeVisible();
+  await expect(panel.getByRole('button', { name: 'API 키 없이 공고 추가하기', exact: true })).toBeVisible();
+});
+
+test('the first-run desktop wizard can open manual job entry with no API key', async ({ page }) => {
+  await injectBridge(page);
+  await mockJobApi(page);
+  await page.goto('/#/app/discover', { waitUntil: 'networkidle' });
+  await wizard(page).getByRole('button', { name: 'API 키 없이 공고 추가하기', exact: true }).click();
+  await expect(page).toHaveURL(/#\/app\/jobs/);
+  const manual = page.getByRole('dialog');
+  await expect(manual).toBeVisible();
+  await expect(manual.locator('[name="company"]')).toBeVisible();
+  await manual.locator('[name="company"]').fill('가상 일자리 회사');
+  await manual.locator('[name="title"]').fill('가상 백엔드 개발자');
+  await manual.locator('[name="description"]').fill('API 키 없이 직접 기록하는 가상의 테스트 공고이며 실제로 채용하지 않습니다.');
+  await manual.getByRole('button', { name: '공고 보관하기', exact: true }).click();
+  await expect(page.locator('.job-detail')).toContainText('가상 일자리 회사');
+  await expect(page.locator('.save-status')).toHaveText('저장됨');
+  await page.reload({ waitUntil: 'networkidle' });
+  await expect(page.locator('.job-detail')).toContainText('가상 일자리 회사');
+  const keys = await page.evaluate(() => (window as unknown as { __jarizipBridgeCalls: Array<{ method: string }> }).__jarizipBridgeCalls.filter(item => item.method === 'setApiKey'));
+  expect(keys).toHaveLength(0);
 });
 
 test('no desktop wizard without the bridge, and a static preview keeps .env.local guidance', async ({ page }) => {
@@ -244,8 +265,8 @@ test('Skip allows manual job entry while keeping a 연결 설정 entry in Settin
   await injectBridge(page);
   await mockJobApi(page);
   await page.goto('/#/app/discover', { waitUntil: 'networkidle' });
-  await wizard(page).getByRole('button', { name: '공고 직접 추가하기', exact: true }).click();
-  await expect(page).toHaveURL(/#\/app\/jobs\?new=1/);
+  await wizard(page).getByRole('button', { name: 'API 키 없이 공고 추가하기', exact: true }).click();
+  await expect(page).toHaveURL(/#\/app\/jobs/);
   await expect(page.getByRole('dialog', { name: '좋은 공고, 여기 모아두기' })).toBeVisible();
   await page.getByRole('dialog').getByRole('button', { name: '취소', exact: true }).click();
   await page.goto('/#/app/settings', { waitUntil: 'networkidle' });
